@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase 即時傳輸 (GitHub 版)</title>
+    <style>
+        :root { --primary: #039be5; --bg: #f4f4f9; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #333; text-align: center; margin-top: 0; }
+        .input-group { margin-bottom: 15px; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:disabled { background: #ccc; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+        .post { background: #fff; border-bottom: 1px solid #eee; padding: 15px 0; animation: fadeIn 0.5s; }
+        .post:last-child { border: none; }
+        .post p { margin: 5px 0; color: #444; word-wrap: break-word; }
+        .post img { max-width: 100%; border-radius: 8px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .post .time { font-size: 12px; color: #999; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>即時分享</h2>
+    
+    <div class="input-group">
+        <input type="text" id="textInput" placeholder="寫啲嘢...">
+    </div>
+    <div class="input-group">
+        <input type="file" id="fileInput" accept="image/*, .pdf, .txt, .docx">
+    </div>
+    <button id="upBtn">發布上傳</button>
+
+    <hr>
+
+    <div id="list">
+        <p style="text-align: center; color: #999;">正在連線到 Firebase...</p>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getDatabase, ref as dRef, push, set, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // ⚠️ 喺呢度更換成你喺 Firebase Console 攞到嘅 Config！
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
+    const db = getDatabase(app);
+
+    const upBtn = document.getElementById('upBtn');
+    const textInput = document.getElementById('textInput');
+    const fileInput = document.getElementById('fileInput');
+    const listDiv = document.getElementById('list');
+
+    // 1. 上載 Logic
+    upBtn.onclick = async () => {
+        const file = fileInput.files[0];
+        const text = textInput.value.trim();
+
+        if (!file && !text) {
+            alert("請輸入文字或選擇檔案！");
+            return;
+        }
+
+        upBtn.disabled = true;
+        upBtn.innerText = "上載中...";
+
+        try {
+            let fileUrl = "";
+            if (file) {
+                // 將檔案名加上時間戳，防止檔名重複
+                const fileName = Date.now() + "_" + file.name;
+                const storageRef = sRef(storage, 'uploads/' + fileName);
+                await uploadBytes(storageRef, file);
+                fileUrl = await getDownloadURL(storageRef);
+            }
+
+            // 寫入 Realtime Database
+            const postsRef = dRef(db, 'posts');
+            await push(postsRef, {
+                message: text,
+                url: fileUrl,
+                fileName: file ? file.name : "",
+                createdAt: new Date().toLocaleString()
+            });
+
+            // 清空輸入框
+            textInput.value = "";
+            fileInput.value = "";
+            alert("上載完成！");
+        } catch (error) {
+            console.error(error);
+            alert("錯誤: " + error.message);
+        } finally {
+            upBtn.disabled = false;
+            upBtn.innerText = "發布上傳";
+        }
+    };
+
+    // 2. 實時監聽 Logic
+    const latestPostsQuery = query(dRef(db, 'posts'), limitToLast(10));
+    onValue(latestPostsQuery, (snapshot) => {
+        listDiv.innerHTML = "";
+        const data = snapshot.val();
+        
+        if (!data) {
+            listDiv.innerHTML = "<p style='text-align: center; color: #999;'>暫時未有內容</p>";
+            return;
+        }
+
+        // 將物件轉成 Array 並倒序排列（新嘅喺上面）
+        const posts = Object.values(data).reverse();
+
+        posts.forEach(post => {
+            const postEl = document.createElement('div');
+            postEl.className = 'post';
+            
+            let htmlContent = `<p class="time">${post.createdAt}</p>`;
+            if (post.message) htmlContent += `<p>${post.message}</p>`;
+            
+            if (post.url) {
+                // 如果係圖片就顯示圖，否則顯示下載連結
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(post.url) || post.url.includes("image");
+                if (isImage) {
+                    htmlContent += `<img src="${post.url}" alt="image">`;
+                } else {
+                    htmlContent += `<p><a href="${post.url}" target="_blank">📎 下載檔案: ${post.fileName}</a></p>`;
+                }
+            }
+            
+            postEl.innerHTML = htmlContent;
+            listDiv.appendChild(postEl);
+        });
+    });
+</script>
+
+</body>
+</html>
