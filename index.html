@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Share + Preview</title>
+    <title>Instant Share + Individual Delete</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -11,19 +11,23 @@
         .upload-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         
-        /* 按鈕顏色 */
         #uploadBtn { background: #0084ff; color: white; border: none; font-weight: bold; cursor: pointer; }
-        #clearBtn { background: #ff4d4f; color: white; border: none; font-size: 12px; cursor: pointer; margin-top: 10px; opacity: 0.7; }
-        #clearBtn:hover { opacity: 1; }
         button:disabled { background: #ccc; }
 
-        /* 預覽圖樣式 */
         #previewContainer { display: none; width: 100%; margin: 10px 0; }
         #previewImg { width: 100%; border-radius: 8px; border: 2px dashed #ddd; }
 
         .post { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
         .post img { width: 100%; border-radius: 8px; margin-top: 10px; }
         .time { color: #888; font-size: 11px; }
+        
+        /* 刪除掣樣式 */
+        .delete-btn { 
+            position: absolute; top: 15px; right: 15px; 
+            color: #ff4d4f; cursor: pointer; font-size: 12px; font-weight: bold;
+            padding: 5px; opacity: 0.6;
+        }
+        .delete-btn:hover { opacity: 1; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -32,15 +36,11 @@
     <div class="upload-card">
         <h2>Share Moment</h2>
         <input type="text" id="msg" placeholder="What's on your mind?">
-        
         <input type="file" id="photo" accept="image/*">
         <div id="previewContainer">
-            <p style="font-size: 12px; color: #888;">Image Preview:</p>
             <img id="previewImg" src="">
         </div>
-
         <button id="uploadBtn">Post Now</button>
-        <button id="clearBtn">Delete All Messages</button>
     </div>
 
     <div id="feed">Loading feed...</div>
@@ -52,13 +52,12 @@
 
     const db = supabase.createClient(SB_URL, SB_KEY);
     const uploadBtn = document.getElementById('uploadBtn');
-    const clearBtn = document.getElementById('clearBtn');
     const photoInput = document.getElementById('photo');
     const previewContainer = document.getElementById('previewContainer');
     const previewImg = document.getElementById('previewImg');
     const feed = document.getElementById('feed');
 
-    // --- Feature 2: Image Preview Logic ---
+    // 預覽功能
     photoInput.onchange = () => {
         const file = photoInput.files[0];
         if (file) {
@@ -68,11 +67,10 @@
                 previewContainer.style.display = 'block';
             }
             reader.readAsDataURL(file);
-        } else {
-            previewContainer.style.display = 'none';
         }
     };
 
+    // 渲染貼文
     function render(data) {
         if (!data || data.length === 0) {
             feed.innerHTML = "<p style='text-align:center;color:#888;'>No posts yet.</p>";
@@ -80,6 +78,7 @@
         }
         feed.innerHTML = data.map(p => `
             <div class="post">
+                <span class="delete-btn" onclick="deletePost(${p.id})">Delete</span>
                 <div class="time">${new Date(p.created_at).toLocaleString()}</div>
                 <p>${p.message || ''}</p>
                 ${p.url ? `<img src="${p.url}">` : ''}
@@ -87,11 +86,20 @@
         `).join('');
     }
 
+    // 單獨刪除貼文功能
+    async function deletePost(id) {
+        if (!confirm("Delete this post?")) return;
+        const { error } = await db.from('posts').delete().eq('id', id);
+        if (error) alert("Error: " + error.message);
+        // 刪除後不需要手動呼叫 fetchPosts，Realtime 監聽會自動處理
+    }
+
     async function fetchPosts() {
         const { data } = await db.from('posts').select('*').order('created_at', { ascending: false });
         render(data);
     }
 
+    // 上傳功能
     uploadBtn.onclick = async () => {
         const file = photoInput.files[0];
         const message = document.getElementById('msg').value;
@@ -108,10 +116,8 @@
                 const { data: urlData } = db.storage.from('uploads').getPublicUrl(fileName);
                 finalUrl = urlData.publicUrl;
             }
-
             await db.from('posts').insert([{ message, url: finalUrl }]);
-
-            // Reset UI
+            
             document.getElementById('msg').value = '';
             photoInput.value = '';
             previewContainer.style.display = 'none';
@@ -123,26 +129,7 @@
         }
     };
 
-    // --- Feature 1: Delete All Messages ---
-    clearBtn.onclick = async () => {
-        if (!confirm("Are you sure you want to delete ALL messages? This cannot be undone.")) return;
-        
-        clearBtn.disabled = true;
-        clearBtn.innerText = "Deleting...";
-
-        try {
-            // Delete everything from 'posts' table
-            const { error } = await db.from('posts').delete().neq('id', 0); // Hack to delete all: delete where id is not 0
-            if (error) throw error;
-        } catch (e) {
-            alert("Delete failed: " + e.message);
-        } finally {
-            clearBtn.disabled = false;
-            clearBtn.innerText = "Delete All Messages";
-        }
-    };
-
-    // Realtime listener
+    // Realtime 監聽
     db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
         fetchPosts();
     }).subscribe();
