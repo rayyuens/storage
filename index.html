@@ -26,11 +26,10 @@
             font-size: 15px; width: 100%; box-sizing: border-box; outline: none; margin-bottom: 10px;
         }
 
-        /* 壓縮選擇器樣式 */
         .mode-selector { display: flex; gap: 8px; margin-bottom: 15px; }
         .mode-btn { 
             flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid var(--border);
-            background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: #8E8E93;
+            background: white; font-size: 11px; font-weight: 600; cursor: pointer; color: #8E8E93; text-align: center;
         }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: #007AFF10; }
 
@@ -47,10 +46,15 @@
         .item-row:last-child { border-bottom: none; }
         .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .time { font-size: 11px; color: #8E8E93; font-weight: 500; }
-        .message-text { font-size: 16px; font-weight: 500; margin: 8px 0; line-height: 1.4; }
-        .post-img { width: 100%; border-radius: 12px; margin-top: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         
-        .delete-btn { background: #FF3B3015; color: var(--danger); border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .action-group { display: flex; gap: 10px; }
+        
+        .message-text { font-size: 16px; font-weight: 500; margin: 8px 0; line-height: 1.4; }
+        .post-img { width: 100%; border-radius: 12px; margin-top: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; }
+        
+        .btn-link { background: none; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .delete-btn { color: var(--danger); background: #FF3B3015; }
+        .download-btn { color: var(--primary); background: #007AFF15; }
 
         .header-section { text-align: center; padding: 20px 0 10px 0; }
         .header-section h1 { font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
@@ -75,8 +79,8 @@
 
         <span class="card-title">Upload Quality</span>
         <div class="mode-selector">
-            <button class="mode-btn active" id="btnCompress" onclick="setMode('compress')">⚡ Save Space<br>(Compressed)</button>
-            <button class="mode-btn" id="btnRaw" onclick="setMode('raw')">💎 High Quality<br>(Raw File)</button>
+            <button class="mode-btn active" id="btnCompress" onclick="setMode('compress')">⚡ Save Space</button>
+            <button class="mode-btn" id="btnRaw" onclick="setMode('raw')">💎 High Quality</button>
         </div>
 
         <button id="uploadBtn" class="btn-add">Post Now</button>
@@ -93,13 +97,11 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
 
-    const uploadBtn = document.getElementById('uploadBtn');
+    let uploadMode = 'compress';
     const photoInput = document.getElementById('photo');
     const previewContainer = document.getElementById('previewContainer');
     const previewImg = document.getElementById('previewImg');
     const feed = document.getElementById('feed');
-    
-    let uploadMode = 'compress';
 
     function setMode(mode) {
         uploadMode = mode;
@@ -107,7 +109,26 @@
         document.getElementById('btnRaw').classList.toggle('active', mode === 'raw');
     }
 
-    // 壓縮圖片函數
+    // 下載圖片邏輯 (解決跨網域直接下載問題)
+    async function downloadImage(url, filename) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename || 'download.jpg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            // 如果 fetch 失敗，退而求其次直接打開網址
+            window.open(url, '_blank');
+        }
+    }
+
     async function compressImage(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -118,23 +139,12 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     const MAX_WIDTH = 1200;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
+                    let width = img.width; let height = img.height;
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // 轉為 Blob，質素設為 0.7
-                    canvas.toBlob((blob) => {
-                        resolve(blob);
-                    }, 'image/jpeg', 0.7);
+                    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.7);
                 };
             };
         });
@@ -144,85 +154,68 @@
         const file = photoInput.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                previewImg.src = e.target.result;
-                previewContainer.style.display = 'block';
-            }
+            reader.onload = (e) => { previewImg.src = e.target.result; previewContainer.style.display = 'block'; }
             reader.readAsDataURL(file);
         }
     };
 
     function render(data) {
         if (!data || data.length === 0) {
-            feed.innerHTML = "<p style='text-align:center; font-size:13px; color:#8E8E93; padding:20px;'>No moments shared yet.</p>";
+            feed.innerHTML = "<p style='text-align:center; font-size:13px; color:#8E8E93; padding:20px;'>No moments yet.</p>";
             return;
         }
         feed.innerHTML = data.map(p => `
             <div class="item-row">
                 <div class="item-header">
                     <span class="time">${new Date(p.created_at).toLocaleString()}</span>
-                    <button class="delete-btn" onclick="deletePost(${p.id})">Delete</button>
+                    <div class="action-group">
+                        ${p.url ? `<button class="btn-link download-btn" onclick="downloadImage('${p.url}', 'moment_${p.id}.jpg')">Download</button>` : ''}
+                        <button class="btn-link delete-btn" onclick="deletePost(${p.id})">Delete</button>
+                    </div>
                 </div>
                 <div class="message-text">${p.message || ''}</div>
-                ${p.url ? `<img src="${p.url}" class="post-img">` : ''}
+                ${p.url ? `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}', '_blank')">` : ''}
             </div>
         `).join('');
     }
 
     async function fetchPosts() {
-        const { data, error } = await db.from('posts').select('*').order('created_at', { ascending: false });
-        if (!error) render(data);
+        const { data } = await db.from('posts').select('*').order('created_at', { ascending: false });
+        render(data);
     }
 
     async function deletePost(id) {
-        if (confirm("Delete this post?")) {
-            await db.from('posts').delete().eq('id', id);
-        }
+        if (confirm("Delete?")) await db.from('posts').delete().eq('id', id);
     }
 
     uploadBtn.onclick = async () => {
         const file = photoInput.files[0];
         const message = document.getElementById('msg').value;
         if (!file && !message) return;
-
+        const uploadBtn = document.getElementById('uploadBtn');
         uploadBtn.disabled = true;
         uploadBtn.innerText = "Processing...";
 
         try {
             let finalUrl = null;
             if (file) {
-                let uploadFile = file;
-                
-                // 如果選擇壓縮模式
-                if (uploadMode === 'compress') {
-                    uploadFile = await compressImage(file);
-                }
-
-                const fileName = `${Date.now()}_${file.name.split('.')[0]}.jpg`;
-                const { error: uploadError } = await db.storage.from('uploads').upload(fileName, uploadFile);
-                if (uploadError) throw uploadError;
-
+                let uploadFile = uploadMode === 'compress' ? await compressImage(file) : file;
+                const fileName = `${Date.now()}.jpg`;
+                await db.storage.from('uploads').upload(fileName, uploadFile);
                 const { data: urlData } = db.storage.from('uploads').getPublicUrl(fileName);
                 finalUrl = urlData.publicUrl;
             }
-            
             await db.from('posts').insert([{ message, url: finalUrl }]);
-            
             document.getElementById('msg').value = '';
             photoInput.value = '';
             previewContainer.style.display = 'none';
-        } catch (e) {
-            alert("Error: " + e.message);
-        } finally {
+        } catch (e) { alert(e.message); } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerText = "Post Now";
         }
     };
 
-    db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-        fetchPosts();
-    }).subscribe();
-
+    db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
     fetchPosts();
 </script>
 
