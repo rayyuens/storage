@@ -37,7 +37,6 @@
         overflow: hidden;
     }
 
-    /* PWA 更新提示條 */
     .update-banner {
         position: fixed; top: 0; left: 0; right: 0;
         background: var(--primary); color: white;
@@ -65,6 +64,7 @@
         background: var(--card-bg); border-radius: 20px; padding: 16px; 
         margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        position: relative;
     }
 
     .item-header {
@@ -77,11 +77,44 @@
     .copy-btn { cursor: pointer; color: var(--primary); font-weight: 600; }
     .del-btn { color: #d93025; cursor: pointer; font-weight: 600; }
 
+    /* 摺疊邏輯樣式 */
+    .content-wrapper {
+        position: relative;
+        max-height: 200px; /* 初始最大高度 */
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        cursor: pointer;
+    }
+
+    .content-wrapper.expanded {
+        max-height: none;
+    }
+
+    /* 漸層遮罩 (僅在摺疊時顯示) */
+    .content-wrapper:not(.expanded)::after {
+        content: "";
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 50px;
+        background: linear-gradient(transparent, var(--card-bg));
+        pointer-events: none;
+    }
+
     .code-block {
         background: var(--code-bg); color: #d4d4d4; padding: 14px; 
         border-radius: 12px; font-family: 'Courier New', monospace; 
         font-size: 13px; overflow-x: auto; margin: 10px 0;
         white-space: pre; border: 1px solid #333; line-height: 1.5;
+    }
+
+    /* 展開按鈕樣式 */
+    .expand-hint {
+        text-align: center;
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 4px;
+        display: none; /* 預設隱藏，由 JS 判斷高度後顯示 */
     }
 
     .post-img { width: 100%; border-radius: 12px; margin-top: 12px; display: block; }
@@ -164,8 +197,7 @@
 </div>
 
 <script>
-    // --- PWA 自動更新設定 ---
-    const APP_VERSION = '2.1'; // 修改 UI 後請手動增加此數字
+    const APP_VERSION = '2.2'; 
 
     function checkVersion() {
         const lastVersion = localStorage.getItem('app_version');
@@ -183,7 +215,6 @@
         window.location.reload(true);
     }
 
-    // --- Supabase 設定 ---
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -211,10 +242,18 @@
         setTimeout(() => t.style.display = 'none', 1500);
     }
 
-    // 安全複製邏輯 (Base64)
     function copySafe(base64Str) {
         const text = decodeURIComponent(escape(window.atob(base64Str)));
         navigator.clipboard.writeText(text).then(() => showToast());
+    }
+
+    // 切換展開/摺疊
+    function toggleExpand(el) {
+        el.classList.toggle('expanded');
+        const hint = el.parentElement.querySelector('.expand-hint');
+        if (hint) {
+            hint.innerText = el.classList.contains('expanded') ? "點擊收起" : "點擊展開";
+        }
     }
 
     function setMode(mode) {
@@ -271,7 +310,7 @@
             const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
             const sanitizedMsg = escapeHTML(p.message);
 
-            const content = isCode 
+            const contentHTML = isCode 
                 ? `<div class="code-block">${sanitizedMsg}</div>` 
                 : `<div style="white-space:pre-wrap; font-size:15px; line-height:1.5;">${sanitizedMsg}</div>`;
 
@@ -293,11 +332,22 @@
                             <span class="del-btn" onclick="deletePost(${p.id})">刪除</span>
                         </div>
                     </div>
-                    ${content}
+                    <div class="content-wrapper" onclick="toggleExpand(this)">
+                        ${contentHTML}
+                    </div>
+                    <div class="expand-hint">點擊展開</div>
                     ${attachment}
                 </div>
             `;
         }).join('');
+
+        // 渲染後檢查高度，決定是否顯示「展開」提示
+        document.querySelectorAll('.content-wrapper').forEach(wrapper => {
+            if (wrapper.scrollHeight > 200) {
+                wrapper.parentElement.querySelector('.expand-hint').style.display = 'block';
+            }
+        });
+
         feed.scrollTop = feed.scrollHeight;
     }
 
@@ -307,7 +357,6 @@
     }
 
     async function deletePost(id) {
-        // 直接刪除免確認
         await db.from('posts').delete().eq('id', id);
         fetchPosts();
     }
@@ -339,7 +388,6 @@
         }
     };
 
-    // 啟動檢測與即時更新
     window.addEventListener('load', checkVersion);
     db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
     fetchPosts();
