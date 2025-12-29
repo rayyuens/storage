@@ -84,9 +84,7 @@
         overflow: hidden;
         transition: max-height 0.3s ease-out;
     }
-
     .content-wrapper.expanded { max-height: none; }
-
     .content-wrapper.has-overflow:not(.expanded)::after {
         content: "";
         position: absolute;
@@ -108,7 +106,22 @@
         font-weight: 600; margin-top: 8px; display: none; cursor: pointer; padding: 4px 0;
     }
 
-    .post-img { width: 100%; border-radius: 12px; margin-top: 12px; display: block; }
+    /* 多圖顯示樣式 */
+    .attachment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .post-img { 
+        width: 100%; aspect-ratio: 1/1; object-fit: cover;
+        border-radius: 12px; cursor: pointer; border: 1px solid var(--border);
+    }
+    .file-attachment {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px; background: #fff; border-radius: 8px; 
+        font-size: 12px; border: 1px solid var(--border); margin-top: 8px;
+    }
 
     .wa-footer {
         padding: 15px 20px;
@@ -140,11 +153,9 @@
         font-size: 18px; position: relative;
     }
 
-    /* --- Gemini 圓形進度條樣式 --- */
     .spinner {
         animation: rotate 2s linear infinite;
-        width: 24px;
-        height: 24px;
+        width: 24px; height: 24px;
     }
     .spinner .path {
         stroke: var(--primary);
@@ -157,10 +168,23 @@
         50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
         100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
     }
-    /* ------------------------- */
 
-    #previewContainer { display: none; padding: 10px; position: relative; }
-    #previewImg { height: 50px; border-radius: 6px; }
+    /* 多檔案預覽區 */
+    #previewContainer { 
+        display: none; padding: 10px; gap: 8px; overflow-x: auto; 
+        white-space: nowrap;
+    }
+    .preview-item {
+        position: relative; display: inline-block; width: 60px; height: 60px;
+    }
+    .preview-item img {
+        width: 100%; height: 100%; object-fit: cover; border-radius: 8px;
+    }
+    .remove-preview {
+        position: absolute; -5px; right: -5px; background: #444746;
+        color: white; border: none; border-radius: 50%; width: 18px; height: 18px;
+        font-size: 10px; cursor: pointer;
+    }
 
     #qualitySelector { display: none; font-size: 11px; gap: 12px; padding: 5px 12px 10px; }
     .q-chip { cursor: pointer; color: var(--text-sub); padding: 2px 8px; border-radius: 10px; }
@@ -190,14 +214,11 @@
 
 <div class="wa-footer">
     <div class="input-wrapper">
-        <div id="previewContainer">
-            <button onclick="clearPhoto()" style="position:absolute; left: 55px; top:5px; border:none; background:#444746; color:white; border-radius:50%; width:18px; height:18px; font-size:9px;">✕</button>
-            <img id="previewImg" src="">
-        </div>
+        <div id="previewContainer"></div>
 
         <div class="wa-input-row">
             <label for="photo" class="icon-btn" style="font-weight: 300;">+</label>
-            <input type="file" id="photo" style="display:none">
+            <input type="file" id="photo" style="display:none" multiple>
             <textarea id="msg" rows="1" placeholder="輸入訊息或代碼..." oninput="autoResize(this)"></textarea>
             <button id="uploadBtn" class="icon-btn send-btn">➤</button>
         </div>
@@ -210,25 +231,21 @@
 </div>
 
 <script>
-    const APP_VERSION = '2.4'; // 更新版號
-
-    // --- 同之前的 Supabase 與基礎邏輯 ---
+    const APP_VERSION = '2.5'; 
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
 
     let uploadMode = 'compress';
+    let selectedFiles = []; // 存儲目前選擇的檔案
+
     const msgInput = document.getElementById('msg');
     const photoInput = document.getElementById('photo');
     const feed = document.getElementById('feed');
     const uploadBtn = document.getElementById('uploadBtn');
+    const previewContainer = document.getElementById('previewContainer');
 
-    // 進度條 HTML 模板
-    const SPINNER_HTML = `
-        <svg class="spinner" viewBox="0 0 50 50">
-            <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
-        </svg>
-    `;
+    const SPINNER_HTML = `<svg class="spinner" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle></svg>`;
 
     function autoResize(textarea) {
         textarea.style.height = 'auto';
@@ -236,14 +253,12 @@
     }
 
     function escapeHTML(str) {
-        if (!str) return '';
-        return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+        return str ? str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])) : '';
     }
 
     function showToast(text = "已複製") {
         const t = document.getElementById('toast');
-        t.innerText = text;
-        t.style.display = 'block';
+        t.innerText = text; t.style.display = 'block';
         setTimeout(() => t.style.display = 'none', 1500);
     }
 
@@ -252,14 +267,158 @@
         navigator.clipboard.writeText(text).then(() => showToast());
     }
 
-    function toggleExpandById(id) {
-        const wrapper = document.getElementById(`wrapper-${id}`);
-        const hint = document.getElementById(`hint-${id}`);
-        if (!wrapper || !hint) return;
-        wrapper.classList.toggle('expanded');
-        hint.innerText = wrapper.classList.contains('expanded') ? "點擊收起" : "點擊展開";
+    function setMode(mode) {
+        uploadMode = mode;
+        document.getElementById('modeCompress').classList.toggle('active', mode === 'compress');
+        document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
     }
 
+    // 處理多檔案選擇與預覽
+    photoInput.onchange = () => {
+        const files = Array.from(photoInput.files);
+        if (files.length > 0) {
+            selectedFiles = [...selectedFiles, ...files];
+            renderPreviews();
+        }
+        photoInput.value = ''; // 重置 input 以便重複選取
+    };
+
+    function renderPreviews() {
+        previewContainer.innerHTML = '';
+        if (selectedFiles.length === 0) {
+            previewContainer.style.display = 'none';
+            document.getElementById('qualitySelector').style.display = 'none';
+            return;
+        }
+
+        previewContainer.style.display = 'flex';
+        document.getElementById('qualitySelector').style.display = 'flex';
+
+        selectedFiles.forEach((file, index) => {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            
+            const isImg = file.type.startsWith('image/');
+            const reader = new FileReader();
+            
+            div.innerHTML = `<button class="remove-preview" onclick="removeFile(${index})">✕</button>`;
+            const img = document.createElement('img');
+            
+            if (isImg) {
+                reader.onload = (e) => img.src = e.target.result;
+                reader.readAsDataURL(file);
+            } else {
+                img.src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
+            }
+            div.appendChild(img);
+            previewContainer.appendChild(div);
+        });
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        renderPreviews();
+    }
+
+    function clearPhoto() {
+        selectedFiles = [];
+        renderPreviews();
+    }
+
+    async function compressImage(file) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX = 1200;
+                let w = img.width, h = img.height;
+                if (w > MAX) { h *= MAX/w; w = MAX; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(b => resolve(b), 'image/jpeg', 0.8);
+            };
+        });
+    }
+
+    function render(data) {
+        if (!data) return;
+        feed.innerHTML = data.map(p => {
+            const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
+            const isCode = p.message && (p.message.includes('=>') || p.message.includes('{') || p.message.includes('const '));
+            const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
+            
+            // 處理多個 URL (支援 JSON 陣列或逗號字串)
+            let urls = [];
+            if (p.url) {
+                try { urls = JSON.parse(p.url); } 
+                catch(e) { urls = p.url.split(','); }
+            }
+            if (!Array.isArray(urls)) urls = [urls];
+
+            const imgs = urls.filter(u => u.match(/\.(jpg|jpeg|png|gif|webp)/i));
+            const files = urls.filter(u => !u.match(/\.(jpg|jpeg|png|gif|webp)/i));
+
+            let attachmentHTML = '';
+            if (imgs.length > 0) {
+                attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `<img src="${u}" class="post-img" onclick="window.open('${u}')">`).join('')}</div>`;
+            }
+            if (files.length > 0) {
+                attachmentHTML += files.map(u => `<div class="file-attachment" onclick="window.open('${u}')">📄 附加檔案</div>`).join('');
+            }
+
+            return `
+                <div class="item-row">
+                    <div class="item-header">
+                        <span>${time}</span>
+                        <div class="action-row">
+                            <span class="copy-btn" onclick="copySafe('${safeBase64}')">複製</span>
+                            <span class="del-btn" onclick="deletePost(${p.id})">刪除</span>
+                        </div>
+                    </div>
+                    <div class="content-wrapper" id="wrapper-${p.id}">
+                        ${isCode ? `<div class="code-block">${escapeHTML(p.message)}</div>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
+                    </div>
+                    <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">點擊展開</div>
+                    ${attachmentHTML}
+                </div>
+            `;
+        }).join('');
+        checkOverflow();
+        feed.scrollTop = feed.scrollHeight;
+    }
+
+    uploadBtn.onclick = async () => {
+        const message = msgInput.value.trim();
+        if (selectedFiles.length === 0 && !message) return;
+
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = SPINNER_HTML;
+
+        try {
+            let uploadedUrls = [];
+            for (let file of selectedFiles) {
+                const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
+                const path = `${Date.now()}_${file.name}`;
+                const { data, error } = await db.storage.from('uploads').upload(path, finalFile);
+                if (error) throw error;
+                uploadedUrls.push(db.storage.from('uploads').getPublicUrl(path).data.publicUrl);
+            }
+
+            // 將 URL 陣列轉成字串儲存
+            const urlString = JSON.stringify(uploadedUrls);
+            await db.from('posts').insert([{ message, url: urlString }]);
+
+            msgInput.value = ''; msgInput.style.height = 'auto';
+            clearPhoto();
+            fetchPosts();
+        } catch (e) { alert(e.message); } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = "➤";
+        }
+    };
+
+    // 其他原有邏輯...
     function checkOverflow() {
         document.querySelectorAll('.content-wrapper').forEach(wrapper => {
             const hint = wrapper.parentElement.querySelector('.expand-hint');
@@ -273,149 +432,21 @@
             }
         });
     }
-
-    function setMode(mode) {
-        uploadMode = mode;
-        document.getElementById('modeCompress').classList.toggle('active', mode === 'compress');
-        document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
+    function toggleExpandById(id) {
+        const w = document.getElementById(`wrapper-${id}`), h = document.getElementById(`hint-${id}`);
+        w.classList.toggle('expanded');
+        h.innerText = w.classList.contains('expanded') ? "點擊收起" : "點擊展開";
     }
-
-    photoInput.onchange = () => {
-        const file = photoInput.files[0];
-        if (file) {
-            document.getElementById('previewContainer').style.display = 'block';
-            document.getElementById('qualitySelector').style.display = 'flex';
-            const reader = new FileReader();
-            reader.onload = (e) => { 
-                document.getElementById('previewImg').src = file.type.startsWith('image/') ? e.target.result : 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
-            }
-            reader.readAsDataURL(file);
-        }
-    };
-
-    function clearPhoto() {
-        photoInput.value = '';
-        document.getElementById('previewContainer').style.display = 'none';
-        document.getElementById('qualitySelector').style.display = 'none';
-    }
-
-    async function compressImage(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (e) => {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX = 1200;
-                    let w = img.width, h = img.height;
-                    if (w > MAX) { h *= MAX/w; w = MAX; }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    canvas.toBlob(b => resolve(b), 'image/jpeg', 0.8);
-                };
-            };
-        });
-    }
-
-    function render(data) {
-        if (!data) return;
-        feed.innerHTML = data.map(p => {
-            const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
-            const isCode = p.message && (p.message.includes('</') || p.message.includes('=>') || p.message.includes('{') || p.message.includes('const ') || p.message.includes('function'));
-            const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
-            const sanitizedMsg = escapeHTML(p.message);
-            const contentHTML = isCode 
-                ? `<div class="code-block">${sanitizedMsg}</div>` 
-                : `<div style="white-space:pre-wrap; font-size:15px; line-height:1.5;">${sanitizedMsg}</div>`;
-
-            let attachment = '';
-            if (p.url) {
-                if (p.url.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
-                    attachment = `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}')">`;
-                } else {
-                    attachment = `<div style="margin-top:12px; padding:10px; background:#fff; border-radius:8px; font-size:12px; border:1px solid var(--border);">📄 檔案已附加</div>`;
-                }
-            }
-
-            return `
-                <div class="item-row">
-                    <div class="item-header">
-                        <span>${time}</span>
-                        <div class="action-row">
-                            <span class="copy-btn" onclick="copySafe('${safeBase64}')">複製</span>
-                            <span class="del-btn" onclick="deletePost(${p.id})">刪除</span>
-                        </div>
-                    </div>
-                    <div class="content-wrapper" id="wrapper-${p.id}">
-                        ${contentHTML}
-                    </div>
-                    <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">點擊展開</div>
-                    ${attachment}
-                </div>
-            `;
-        }).join('');
-        checkOverflow();
-        feed.scrollTop = feed.scrollHeight;
-    }
-
     async function fetchPosts() {
         const { data } = await db.from('posts').select('*').order('created_at', { ascending: true });
         render(data);
     }
-
     async function deletePost(id) {
         await db.from('posts').delete().eq('id', id);
         fetchPosts();
     }
+    function applyUpdate() { location.reload(true); }
 
-    uploadBtn.onclick = async () => {
-        const file = photoInput.files[0];
-        const message = msgInput.value.trim();
-        if (!file && !message) return;
-
-        // 切換為進度條狀態
-        uploadBtn.disabled = true;
-        uploadBtn.innerHTML = SPINNER_HTML;
-
-        try {
-            let url = null;
-            if (file) {
-                const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
-                const path = `${Date.now()}_${file.name}`;
-                await db.storage.from('uploads').upload(path, finalFile);
-                url = db.storage.from('uploads').getPublicUrl(path).data.publicUrl;
-            }
-            await db.from('posts').insert([{ message, url }]);
-            msgInput.value = '';
-            msgInput.style.height = 'auto';
-            clearPhoto();
-            fetchPosts();
-        } catch (e) { alert(e.message); } finally {
-            // 恢復為飛機圖示
-            uploadBtn.disabled = false;
-            uploadBtn.innerHTML = "➤";
-        }
-    };
-
-    function checkVersion() {
-        const lastVersion = localStorage.getItem('app_version');
-        if (lastVersion && lastVersion !== APP_VERSION) {
-            document.getElementById('updateBanner').style.display = 'block';
-        }
-        localStorage.setItem('app_version', APP_VERSION);
-    }
-
-    async function applyUpdate() {
-        if ('caches' in window) {
-            const keys = await caches.keys();
-            for (let key of keys) await caches.delete(key);
-        }
-        window.location.reload(true);
-    }
-
-    window.addEventListener('load', checkVersion);
     db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
     fetchPosts();
 </script>
