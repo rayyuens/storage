@@ -1,49 +1,47 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>即時相片分享</title>
+    <title>Instant Photo Share</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f5f5f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 500px; }
-        .upload-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { background: #3ecf8e; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:disabled { background: #ccc; }
+        .upload-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #1c1e21; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { background: #0084ff; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #0073e6; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         .post { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .post img { width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
         .time { color: #888; font-size: 12px; margin-bottom: 5px; }
+        p { margin: 5px 0; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="upload-card">
-        <h2>分享生活</h2>
-        <input type="text" id="msg" placeholder="想寫啲咩？">
+        <h2>Share Moment</h2>
+        <input type="text" id="msg" placeholder="What's on your mind?">
         <input type="file" id="photo" accept="image/*">
-        <button id="uploadBtn">發布上傳</button>
+        <button id="uploadBtn">Post Now</button>
     </div>
 
-    <div id="feed">載入中...</div>
+    <div id="feed">Loading...</div>
 </div>
 
 <script>
-    // 1. 設定你的 Supabase 資料
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
 
-    // 2. 初始化 Supabase (使用 db 以避免名稱衝突)
     const db = supabase.createClient(SB_URL, SB_KEY);
-
     const uploadBtn = document.getElementById('uploadBtn');
     const feed = document.getElementById('feed');
 
-    // 3. 獲取內容的函數
     async function fetchPosts() {
-        console.log("正在嘗試獲取資料...");
         try {
             const { data, error } = await db
                 .from('posts')
@@ -51,84 +49,74 @@
                 .order('created_at', { ascending: false });
             
             if (error) throw error;
-
-            if (data.length === 0) {
-                feed.innerHTML = "<p style='text-align:center; color:#888;'>暫時未有內容，快啲去上傳啦！</p>";
-                return;
-            }
-
-            feed.innerHTML = data.map(p => `
-                <div class="post">
-                    <div class="time">${new Date(p.created_at).toLocaleString()}</div>
-                    <p>${p.message || ''}</p>
-                    ${p.url ? `<img src="${p.url}" onerror="this.style.display='none'">` : ''}
-                </div>
-            `).join('');
-            console.log("資料加載完成");
+            renderPosts(data);
         } catch (err) {
-            console.error("獲取資料失敗:", err);
-            feed.innerHTML = `<p style='color:red;'>載入失敗: ${err.message}</p>`;
+            feed.innerHTML = `<p style='color:red;'>Error: ${err.message}</p>`;
         }
     }
 
-    // 4. 上傳功能的函數
+    function renderPosts(data) {
+        if (data.length === 0) {
+            feed.innerHTML = "<p style='text-align:center; color:#888;'>No posts yet. Be the first!</p>";
+            return;
+        }
+        feed.innerHTML = data.map(p => `
+            <div class="post">
+                <div class="time">${new Date(p.created_at).toLocaleString()}</div>
+                <p>${p.message || ''}</p>
+                ${p.url ? `<img src="${p.url}" onerror="this.style.display='none'">` : ''}
+            </div>
+        `).join('');
+    }
+
     uploadBtn.onclick = async () => {
         const file = document.getElementById('photo').files[0];
         const message = document.getElementById('msg').value;
 
-        if (!file && !message) return alert("請輸入文字或選擇相片");
+        if (!file && !message) return;
 
         uploadBtn.disabled = true;
-        uploadBtn.innerText = "上傳中...";
-
-        let finalUrl = null;
+        uploadBtn.innerText = "Posting...";
 
         try {
-            // 如果有選相片，先傳到 Storage
+            let finalUrl = null;
             if (file) {
                 const fileName = `${Date.now()}_${file.name}`;
-                const { data: storageData, error: storageError } = await db.storage
+                const { error: storageError } = await db.storage
                     .from('uploads')
                     .upload(fileName, file);
-
                 if (storageError) throw storageError;
-
-                // 獲取圖片公開網址
-                const { data: urlData } = db.storage
-                    .from('uploads')
-                    .getPublicUrl(fileName);
-                
+                const { data: urlData } = db.storage.from('uploads').getPublicUrl(fileName);
                 finalUrl = urlData.publicUrl;
             }
 
-            // 將文字和圖片網址存入 Database
             const { error: dbError } = await db
                 .from('posts')
                 .insert([{ message: message, url: finalUrl }]);
 
             if (dbError) throw dbError;
 
-            // 成功後清空
+            // Reset UI instantly
             document.getElementById('msg').value = '';
             document.getElementById('photo').value = '';
-            alert("發布成功！");
-            fetchPosts();
+            fetchPosts(); 
 
         } catch (err) {
-            console.error("發布出錯:", err);
-            alert("出錯咗：" + err.message);
+            alert("Error: " + err.message);
         } finally {
             uploadBtn.disabled = false;
-            uploadBtn.innerText = "發布上傳";
+            uploadBtn.innerText = "Post Now";
         }
     };
 
-    // 5. 設定 Realtime 即時更新
-    db.channel('public:posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts)
+    // ENABLE REALTIME: This makes it update instantly on all screens
+    db.channel('custom-all-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
+          console.log('Change received!', payload);
+          fetchPosts();
+      })
       .subscribe();
 
-    // 網頁開啟時立即執行一次
     fetchPosts();
 </script>
 
