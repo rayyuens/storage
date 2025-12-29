@@ -19,12 +19,14 @@
         --text: #1C1C1E; --border: #D1D1D6;
     }
 
+    * { box-sizing: border-box; }
+
     body {
         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         background-color: var(--bg); color: var(--text); margin: 0; padding: 0;
-        /* 確保 body 唔會周圍跳 */
-        position: fixed; width: 100%; height: 100%; overflow: hidden;
         display: flex; flex-direction: column;
+        height: 100vh; width: 100vw;
+        overflow: hidden; /* 核心：防止整個 body 滾動 */
     }
 
     .header-section { 
@@ -32,53 +34,84 @@
         backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
         text-align: center; padding: 15px 0; 
         border-bottom: 0.5px solid var(--border);
-        z-index: 1000; width: 100%;
-        /* 支援 iOS 頂部瀏海位 */
+        z-index: 1000; flex-shrink: 0;
         padding-top: env(safe-area-inset-top);
     }
     .header-section h1 { font-size: 17px; font-weight: 700; margin: 0; }
 
     .feed-container { 
-        flex: 1; overflow-y: scroll; 
-        -webkit-overflow-scrolling: touch; /* iOS 滑動順暢啲 */
-        padding: 10px 12px;
-        /* 重要：避免內容被 Header 同 Footer 遮住 */
-        margin-top: 0; 
+        flex: 1; 
+        overflow-y: auto; 
+        -webkit-overflow-scrolling: touch;
+        padding: 15px;
         background-color: var(--bg);
     }
 
-    /* 為第一條同最後一條 message 加 spacing */
-    .feed-container > :first-child { margin-top: 70px; } 
-    .feed-container > :last-child { margin-bottom: 120px; }
-
     .item-row { 
-        background: var(--card); border-radius: 12px; padding: 12px; 
-        margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+        background: var(--card); border-radius: 12px; padding: 15px; 
+        margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        word-wrap: break-word;
     }
+
+    .item-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 10px; font-size: 12px; color: #8E8E93;
+    }
+
+    /* 專門為顯示 Code 準備的樣式 */
+    .code-display {
+        background: #1e1e1e; color: #d4d4d4;
+        padding: 12px; border-radius: 8px;
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 13px; line-height: 1.5;
+        overflow-x: auto; white-space: pre-wrap;
+        margin: 10px 0;
+        border: 1px solid #333;
+    }
+
+    .post-img { width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer; }
 
     .wa-footer {
         background: rgba(246, 246, 246, 0.95);
         backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
         border-top: 0.5px solid var(--border);
-        padding: 8px 12px;
-        /* 支援 iOS 底部黑條位 */
-        padding-bottom: calc(env(safe-area-inset-bottom) + 15px);
-        z-index: 1000;
+        padding: 10px 12px;
+        padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+        flex-shrink: 0;
     }
+
+    .wa-input-row { display: flex; align-items: flex-end; gap: 10px; }
     
+    .input-container { flex: 1; background: #fff; border: 0.5px solid var(--border); border-radius: 20px; padding: 5px 12px; }
+    
+    textarea {
+        width: 100%; border: none; outline: none; font-size: 16px;
+        padding: 8px 0; max-height: 150px; resize: none;
+    }
+
+    #previewContainer {
+        display: none; padding: 10px; position: relative;
+        background: #fff; border-radius: 10px; margin-bottom: 10px;
+    }
+    #previewImg { max-height: 100px; border-radius: 5px; }
+
+    .icon-btn { 
+        background: var(--primary); color: white; border: none; 
+        width: 35px; height: 35px; border-radius: 50%; font-size: 18px;
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    #iosPrompt {
+        display: none; position: fixed; bottom: 100px; left: 20px; right: 20px;
+        background: white; padding: 15px; border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 2000;
+    }
+
+    #qualitySelector { display: none; font-size: 11px; margin-top: 5px; gap: 10px; }
+    .active { color: var(--primary); font-weight: bold; }
 </style>
 </head>
 <body>
-
-<div id="iosPrompt">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/1042/1042339.png" width="40">
-        <div style="font-size: 13px;">
-            想用全屏 App 體驗？撳底邊嘅 <b>分享掣</b>，再揀 <b>「加至主畫面」</b>。
-        </div>
-        <button onclick="document.getElementById('iosPrompt').style.display='none'" style="border:none; background:none; font-size:18px;">✕</button>
-    </div>
-</div>
 
 <div class="header-section">
     <h1>Moments Feed</h1>
@@ -88,21 +121,30 @@
     <p style="text-align:center; color:#8E8E93; padding: 40px;">Syncing messages...</p>
 </div>
 
+<div id="iosPrompt">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/1042/1042339.png" width="40">
+        <div style="font-size: 13px;">
+            想用全屏 App 體驗？撳底邊嘅 <b>分享掣</b>，再揀 <b>「加至主畫面」</b>。
+        </div>
+        <button onclick="document.getElementById('iosPrompt').style.display='none'">✕</button>
+    </div>
+</div>
+
 <div class="wa-footer">
     <div id="previewContainer">
-        <button class="close-preview" onclick="clearPhoto()">✕</button>
-        <img id="previewImg" src="">
-        <div id="fileNameDisplay" style="font-size: 10px; color: #8E8E93; margin-top: 5px; overflow: hidden; text-overflow: ellipsis;"></div>
+        <button onclick="clearPhoto()" style="position:absolute; right:5px; top:5px; border:none; background:#eee; border-radius:50%;">✕</button>
+        <img id="previewImg">
+        <div id="fileNameDisplay" style="font-size: 10px; color: #8E8E93;"></div>
     </div>
 
     <div class="wa-input-row">
-        <label for="photo" style="cursor: pointer; font-size: 22px; margin-bottom: 6px;">📎</label>
+        <label for="photo" style="cursor: pointer; font-size: 24px;">📎</label>
         <input type="file" id="photo" style="display:none">
 
         <div class="input-container">
-            <textarea id="msg" rows="1" placeholder="Message" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <textarea id="msg" rows="1" placeholder="Message or Code..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
             <div id="qualitySelector">
-                <span style="padding-left:0; color:#444;">Photo Quality:</span>
                 <span id="modeCompress" class="active" onclick="setMode('compress')">⚡ Compress</span>
                 <span id="modeRaw" onclick="setMode('raw')">💎 Raw</span>
             </div>
@@ -113,6 +155,7 @@
 </div>
 
 <script>
+    // 配置 Supabase
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -120,11 +163,16 @@
     let uploadMode = 'compress';
     const msgInput = document.getElementById('msg');
     const photoInput = document.getElementById('photo');
-    const previewContainer = document.getElementById('previewContainer');
-    const previewImg = document.getElementById('previewImg');
-    const qualitySelector = document.getElementById('qualitySelector');
     const feed = document.getElementById('feed');
     const uploadBtn = document.getElementById('uploadBtn');
+
+    // 安全轉換 HTML 標籤
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        }[m]));
+    }
 
     function setMode(mode) {
         uploadMode = mode;
@@ -132,48 +180,28 @@
         document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
     }
 
-    async function downloadFile(url) {
-        try {
-            const urlParts = url.split('/');
-            const rawName = urlParts[urlParts.length - 1];
-            const cleanName = rawName.includes('_') ? rawName.split('_').slice(1).join('_') : rawName;
-            const res = await fetch(url);
-            const blob = await res.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = decodeURIComponent(cleanName);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(blobUrl);
-        } catch (e) { window.open(url, '_blank'); }
-    }
-
     photoInput.onchange = () => {
         const file = photoInput.files[0];
         if (file) {
             document.getElementById('fileNameDisplay').innerText = file.name;
+            document.getElementById('previewContainer').style.display = 'block';
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImg.src = e.target.result;
-                    previewContainer.style.display = 'block';
-                    qualitySelector.style.display = 'flex';
+                reader.onload = (e) => { 
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('qualitySelector').style.display = 'flex';
                 }
                 reader.readAsDataURL(file);
             } else {
-                previewImg.src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
-                previewContainer.style.display = 'block';
-                qualitySelector.style.display = 'none';
+                document.getElementById('previewImg').src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
+                document.getElementById('qualitySelector').style.display = 'none';
             }
         }
     };
 
     function clearPhoto() {
         photoInput.value = '';
-        previewContainer.style.display = 'none';
-        qualitySelector.style.display = 'none';
+        document.getElementById('previewContainer').style.display = 'none';
     }
 
     async function compressImage(file) {
@@ -190,30 +218,41 @@
                     if (w > MAX) { h *= MAX/w; w = MAX; }
                     canvas.width = w; canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    canvas.toBlob(b => resolve(b), 'image/jpeg', 0.7);
+                    canvas.toBlob(b => resolve(b), 'image/jpeg', 0.8);
                 };
             };
         });
     }
 
     function render(data) {
-        if (!data || data.length === 0) {
-            feed.innerHTML = "<p style='text-align:center; color:#8E8E93; padding: 40px;'>No messages here.</p>";
-            return;
-        }
-        feed.innerHTML = data.map(p => `
-            <div class="item-row">
-                <div class="item-header">
-                    <span class="time">${new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'})}</span>
-                    <div class="action-group">
-                        ${p.url ? `<button class="btn-link download-btn" onclick="downloadFile('${p.url}')">💾 Download</button>` : ''}
-                        <button class="btn-link delete-btn" onclick="deletePost(${p.id})">🗑 Delete</button>
+        if (!data) return;
+        feed.innerHTML = data.map(p => {
+            const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'});
+            
+            // 判斷是否為代碼內容 (包含 < 標籤或長度很長)
+            const isCode = p.message && (p.message.includes('<') || p.message.includes('{'));
+            const content = isCode ? `<div class="code-display">${escapeHTML(p.message)}</div>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`;
+
+            let attachment = '';
+            if (p.url) {
+                if (p.url.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
+                    attachment = `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}')">`;
+                } else {
+                    attachment = `<div class="code-display" style="background:#f0f0f0; color:#333;">📄 File Attached: <a href="${p.url}" target="_blank">Download</a></div>`;
+                }
+            }
+
+            return `
+                <div class="item-row">
+                    <div class="item-header">
+                        <span>${time}</span>
+                        <button onclick="deletePost(${p.id})" style="color:#FF3B30; border:none; background:none;">Delete</button>
                     </div>
+                    ${content}
+                    ${attachment}
                 </div>
-                <div class="message-text">${p.message || ''}</div>
-                ${p.url ? (p.url.match(/\.(jpg|jpeg|png|gif|webp|bmp)/i) ? `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}', '_blank')">` : `<div style="margin-top:10px; padding:10px; background:#F2F2F7; border-radius:8px; display:flex; align-items:center; gap:8px;">📄 <span style="font-size:12px; color:var(--primary); font-weight:600;">Document Attached</span></div>`) : ''}
-            </div>
-        `).join('');
+            `;
+        }).join('');
         feed.scrollTop = feed.scrollHeight;
     }
 
@@ -223,47 +262,46 @@
     }
 
     async function deletePost(id) {
-        if (confirm("Delete this message?")) await db.from('posts').delete().eq('id', id);
+        if (confirm("Delete this?")) {
+            await db.from('posts').delete().eq('id', id);
+            fetchPosts();
+        }
     }
 
     uploadBtn.onclick = async () => {
         const file = photoInput.files[0];
         const message = msgInput.value.trim();
         if (!file && !message) return;
+
         uploadBtn.disabled = true;
         uploadBtn.innerText = "..";
+
         try {
-            let finalUrl = null;
+            let url = null;
             if (file) {
-                let uploadFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
-                const fileName = `${Date.now()}_${file.name}`;
-                await db.storage.from('uploads').upload(fileName, uploadFile);
-                const { data: urlData } = db.storage.from('uploads').getPublicUrl(fileName);
-                finalUrl = urlData.publicUrl;
+                const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
+                const path = `${Date.now()}_${file.name}`;
+                await db.storage.from('uploads').upload(path, finalFile);
+                url = db.storage.from('uploads').getPublicUrl(path).data.publicUrl;
             }
-            await db.from('posts').insert([{ message, url: finalUrl }]);
+            await db.from('posts').insert([{ message, url }]);
             msgInput.value = '';
             msgInput.style.height = 'auto';
             clearPhoto();
-        } catch (e) { alert("Error: " + e.message); } finally {
+            fetchPosts();
+        } catch (e) { alert(e.message); } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerText = "➤";
         }
     };
 
-    db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
+    // 實時更新
+    db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
     fetchPosts();
 
-    // PWA & iOS 引導邏輯
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
-        });
-    }
-
+    // iOS PWA 提示
     const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-    if (isIos && !isStandalone) {
+    if (isIos && !window.navigator.standalone) {
         document.getElementById('iosPrompt').style.display = 'block';
     }
 </script>
