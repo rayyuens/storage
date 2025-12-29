@@ -252,7 +252,7 @@
 </div>
 
 <script>
-    const APP_VERSION = '2.6'; 
+    const APP_VERSION = '2.7'; 
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -274,7 +274,6 @@
         localStorage.setItem('theme', target);
     }
     initTheme();
-    // ------------------
 
     let uploadMode = 'compress';
     let selectedFiles = [];
@@ -291,6 +290,15 @@
         textarea.style.height = 'auto';
         textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
     }
+
+    // --- 新增：鍵盤監聽事件 ---
+    msgInput.addEventListener('keydown', (e) => {
+        // 如果按的是 Enter，且沒有按住 Shift
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // 防止 textarea 預設換行
+            handleSend(); // 執行傳送邏輯
+        }
+    });
 
     function escapeHTML(str) {
         return str ? str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])) : '';
@@ -421,11 +429,14 @@
         feed.scrollTop = feed.scrollHeight;
     }
 
-    uploadBtn.onclick = async () => {
+    // 將傳送邏輯包裝成一個函數，以便按鈕與 Enter 鍵共用
+    async function handleSend() {
         const message = msgInput.value.trim();
         if (selectedFiles.length === 0 && !message) return;
+
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = SPINNER_HTML;
+
         try {
             let uploadedUrls = [];
             for (let file of selectedFiles) {
@@ -437,14 +448,19 @@
             }
             const urlString = JSON.stringify(uploadedUrls);
             await db.from('posts').insert([{ message, url: urlString }]);
-            msgInput.value = ''; msgInput.style.height = 'auto';
+            msgInput.value = ''; 
+            msgInput.style.height = 'auto';
             clearPhoto();
             fetchPosts();
-        } catch (e) { alert(e.message); } finally {
+        } catch (e) { 
+            alert(e.message); 
+        } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = "➤";
         }
-    };
+    }
+
+    uploadBtn.onclick = handleSend;
 
     function checkOverflow() {
         document.querySelectorAll('.content-wrapper').forEach(wrapper => {
