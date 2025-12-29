@@ -77,21 +77,21 @@
     .copy-btn { cursor: pointer; color: var(--primary); font-weight: 600; }
     .del-btn { color: #d93025; cursor: pointer; font-weight: 600; }
 
-    /* 摺疊邏輯樣式 */
+    /* --- 摺疊邏輯修正區 --- */
     .content-wrapper {
         position: relative;
         max-height: 200px; /* 初始最大高度 */
         overflow: hidden;
         transition: max-height 0.3s ease-out;
-        cursor: pointer;
+        /* 移除 cursor: pointer，防止使用者以為 code block 可以點擊 */
     }
 
     .content-wrapper.expanded {
         max-height: none;
     }
 
-    /* 漸層遮罩 (僅在摺疊時顯示) */
-    .content-wrapper:not(.expanded)::after {
+    /* 漸層遮罩：只有當具備 has-overflow 且 尚未展開時才顯示 */
+    .content-wrapper.has-overflow:not(.expanded)::after {
         content: "";
         position: absolute;
         bottom: 0; left: 0; right: 0;
@@ -107,15 +107,17 @@
         white-space: pre; border: 1px solid #333; line-height: 1.5;
     }
 
-    /* 展開按鈕樣式 */
     .expand-hint {
         text-align: center;
         color: var(--primary);
         font-size: 12px;
         font-weight: 600;
-        margin-top: 4px;
-        display: none; /* 預設隱藏，由 JS 判斷高度後顯示 */
+        margin-top: 8px;
+        display: none; /* 預設隱藏，由 JS 判斷高度 */
+        cursor: pointer; /* 只有按鈕可以點擊 */
+        padding: 4px 0;
     }
+    /* -------------------- */
 
     .post-img { width: 100%; border-radius: 12px; margin-top: 12px; display: block; }
 
@@ -197,7 +199,7 @@
 </div>
 
 <script>
-    const APP_VERSION = '2.2'; 
+    const APP_VERSION = '2.3'; 
 
     function checkVersion() {
         const lastVersion = localStorage.getItem('app_version');
@@ -247,14 +249,32 @@
         navigator.clipboard.writeText(text).then(() => showToast());
     }
 
-    // 切換展開/摺疊
-    function toggleExpand(el) {
-        el.classList.toggle('expanded');
-        const hint = el.parentElement.querySelector('.expand-hint');
-        if (hint) {
-            hint.innerText = el.classList.contains('expanded') ? "點擊收起" : "點擊展開";
-        }
+    // --- 修正後的切換函數 ---
+    function toggleExpandById(id) {
+        const wrapper = document.getElementById(`wrapper-${id}`);
+        const hint = document.getElementById(`hint-${id}`);
+        if (!wrapper || !hint) return;
+
+        wrapper.classList.toggle('expanded');
+        hint.innerText = wrapper.classList.contains('expanded') ? "點擊收起" : "點擊展開";
     }
+
+    function checkOverflow() {
+        document.querySelectorAll('.content-wrapper').forEach(wrapper => {
+            const hint = wrapper.parentElement.querySelector('.expand-hint');
+            // 判斷內容是否超過 200px
+            if (wrapper.scrollHeight > 205) { // 205 作為緩衝，避免邊緣 case
+                wrapper.classList.add('has-overflow');
+                if (hint) hint.style.display = 'block';
+            } else {
+                // 如果是短內容，直接取消高度限制，不顯示漸層與按鈕
+                wrapper.style.maxHeight = 'none';
+                wrapper.classList.remove('has-overflow');
+                if (hint) hint.style.display = 'none';
+            }
+        });
+    }
+    // ----------------------
 
     function setMode(mode) {
         uploadMode = mode;
@@ -332,22 +352,16 @@
                             <span class="del-btn" onclick="deletePost(${p.id})">刪除</span>
                         </div>
                     </div>
-                    <div class="content-wrapper" onclick="toggleExpand(this)">
+                    <div class="content-wrapper" id="wrapper-${p.id}">
                         ${contentHTML}
                     </div>
-                    <div class="expand-hint">點擊展開</div>
+                    <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">點擊展開</div>
                     ${attachment}
                 </div>
             `;
         }).join('');
 
-        // 渲染後檢查高度，決定是否顯示「展開」提示
-        document.querySelectorAll('.content-wrapper').forEach(wrapper => {
-            if (wrapper.scrollHeight > 200) {
-                wrapper.parentElement.querySelector('.expand-hint').style.display = 'block';
-            }
-        });
-
+        checkOverflow();
         feed.scrollTop = feed.scrollHeight;
     }
 
