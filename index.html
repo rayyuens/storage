@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Whatsup</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Whatsup PRO</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -33,33 +37,33 @@
         overflow: hidden;
     }
 
+    /* PWA 更新提示條 */
+    .update-banner {
+        position: fixed; top: 0; left: 0; right: 0;
+        background: var(--primary); color: white;
+        padding: 12px; text-align: center; font-size: 14px;
+        z-index: 10000; display: none; cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        animation: slideDown 0.4s ease;
+        font-weight: 600;
+    }
+    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
     .header-section { 
         padding: 16px 20px;
         padding-top: calc(env(safe-area-inset-top) + 10px);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: var(--bg);
-        z-index: 10;
-        border-bottom: 1px solid #f1f3f4;
+        display: flex; align-items: center; justify-content: space-between;
+        background: var(--bg); z-index: 10; border-bottom: 1px solid #f1f3f4;
     }
     .header-section h1 { font-size: 18px; font-weight: 500; margin: 0; color: #444746; }
 
     .feed-container { 
-        flex: 1; 
-        overflow-y: auto; 
-        padding: 20px;
-        scroll-behavior: smooth;
+        flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth;
     }
 
     .item-row { 
-        background: var(--card-bg); 
-        border-radius: 20px; 
-        padding: 16px; 
-        margin-bottom: 20px; 
-        max-width: 800px;
-        margin-left: auto;
-        margin-right: auto;
+        background: var(--card-bg); border-radius: 20px; padding: 16px; 
+        margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
@@ -70,21 +74,14 @@
     }
 
     .action-row { display: flex; gap: 15px; align-items: center; }
-
-    .copy-badge { cursor: pointer; color: var(--primary); font-weight: 600; }
+    .copy-btn { cursor: pointer; color: var(--primary); font-weight: 600; }
+    .del-btn { color: #d93025; cursor: pointer; font-weight: 600; }
 
     .code-block {
-        background: var(--code-bg); 
-        color: #d4d4d4;
-        padding: 14px; 
-        border-radius: 12px;
-        font-family: 'Courier New', Courier, monospace; 
-        font-size: 13px;
-        overflow-x: auto; 
-        margin: 10px 0;
-        white-space: pre;
-        border: 1px solid #333;
-        line-height: 1.5;
+        background: var(--code-bg); color: #d4d4d4; padding: 14px; 
+        border-radius: 12px; font-family: 'Courier New', monospace; 
+        font-size: 13px; overflow-x: auto; margin: 10px 0;
+        white-space: pre; border: 1px solid #333; line-height: 1.5;
     }
 
     .post-img { width: 100%; border-radius: 12px; margin-top: 12px; display: block; }
@@ -96,11 +93,8 @@
     }
 
     .input-wrapper {
-        background: var(--input-bg);
-        border-radius: 28px;
-        padding: 8px 12px;
-        max-width: 800px;
-        margin: 0 auto;
+        background: var(--input-bg); border-radius: 28px; padding: 8px 12px;
+        max-width: 800px; margin: 0 auto;
     }
 
     .wa-input-row { display: flex; align-items: flex-end; gap: 8px; }
@@ -129,13 +123,17 @@
     .toast {
         position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
         background: #323232; color: white; padding: 8px 20px; border-radius: 20px;
-        font-size: 13px; z-index: 1000; display: none;
+        font-size: 13px; z-index: 10000; display: none;
     }
 </style>
 </head>
 <body>
 
-<div id="toast" class="toast">Copied</div>
+<div id="updateBanner" class="update-banner" onclick="applyUpdate()">
+    🚀 發現新版本！點擊此處立即更新介面
+</div>
+
+<div id="toast" class="toast">已複製</div>
 
 <div class="header-section">
     <h1>Whatsup</h1>
@@ -154,18 +152,38 @@
         <div class="wa-input-row">
             <label for="photo" class="icon-btn">📎</label>
             <input type="file" id="photo" style="display:none">
-            <textarea id="msg" rows="1" placeholder="Type message or code..." oninput="autoResize(this)"></textarea>
+            <textarea id="msg" rows="1" placeholder="輸入訊息或代碼..." oninput="autoResize(this)"></textarea>
             <button id="uploadBtn" class="icon-btn send-btn">➤</button>
         </div>
         
         <div id="qualitySelector">
-            <span id="modeCompress" class="q-chip active" onclick="setMode('compress')">Compress</span>
-            <span id="modeRaw" class="q-chip" onclick="setMode('raw')">Original</span>
+            <span id="modeCompress" class="q-chip active" onclick="setMode('compress')">壓縮</span>
+            <span id="modeRaw" class="q-chip" onclick="setMode('raw')">原圖</span>
         </div>
     </div>
 </div>
 
 <script>
+    // --- PWA 自動更新設定 ---
+    const APP_VERSION = '2.1'; // 修改 UI 後請手動增加此數字
+
+    function checkVersion() {
+        const lastVersion = localStorage.getItem('app_version');
+        if (lastVersion && lastVersion !== APP_VERSION) {
+            document.getElementById('updateBanner').style.display = 'block';
+        }
+        localStorage.setItem('app_version', APP_VERSION);
+    }
+
+    async function applyUpdate() {
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            for (let key of keys) await caches.delete(key);
+        }
+        window.location.reload(true);
+    }
+
+    // --- Supabase 設定 ---
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -186,16 +204,17 @@
         return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
     }
 
-    function showToast() {
+    function showToast(text = "已複製") {
         const t = document.getElementById('toast');
+        t.innerText = text;
         t.style.display = 'block';
         setTimeout(() => t.style.display = 'none', 1500);
     }
 
-    // Fixed Copy logic using Base64 for safety
+    // 安全複製邏輯 (Base64)
     function copySafe(base64Str) {
         const text = decodeURIComponent(escape(window.atob(base64Str)));
-        navigator.clipboard.writeText(text).then(showToast);
+        navigator.clipboard.writeText(text).then(() => showToast());
     }
 
     function setMode(mode) {
@@ -249,7 +268,6 @@
             const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
             const isCode = p.message && (p.message.includes('</') || p.message.includes('=>') || p.message.includes('{') || p.message.includes('const ') || p.message.includes('function'));
             
-            // Safe encoding for copy function
             const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
             const sanitizedMsg = escapeHTML(p.message);
 
@@ -262,7 +280,7 @@
                 if (p.url.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
                     attachment = `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}')">`;
                 } else {
-                    attachment = `<div style="margin-top:12px; padding:10px; background:#fff; border-radius:8px; font-size:12px; border:1px solid var(--border);">📄 Document</div>`;
+                    attachment = `<div style="margin-top:12px; padding:10px; background:#fff; border-radius:8px; font-size:12px; border:1px solid var(--border);">📄 檔案已附加</div>`;
                 }
             }
 
@@ -271,8 +289,8 @@
                     <div class="item-header">
                         <span>${time}</span>
                         <div class="action-row">
-                            <span class="copy-badge" onclick="copySafe('${safeBase64}')">Copy</span>
-                            <span onclick="deletePost(${p.id})" style="color:#d93025; cursor:pointer; font-weight:600;">Delete</span>
+                            <span class="copy-btn" onclick="copySafe('${safeBase64}')">複製</span>
+                            <span class="del-btn" onclick="deletePost(${p.id})">刪除</span>
                         </div>
                     </div>
                     ${content}
@@ -289,6 +307,7 @@
     }
 
     async function deletePost(id) {
+        // 直接刪除免確認
         await db.from('posts').delete().eq('id', id);
         fetchPosts();
     }
@@ -320,6 +339,8 @@
         }
     };
 
+    // 啟動檢測與即時更新
+    window.addEventListener('load', checkVersion);
     db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
     fetchPosts();
 </script>
