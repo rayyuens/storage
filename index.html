@@ -47,16 +47,16 @@
     import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
     import { getDatabase, ref as dRef, push, set, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // ⚠️ 喺呢度更換成你喺 Firebase Console 攞到嘅 Config！
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT.firebaseapp.com",
-        databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyBYXFua7YJ2ZpEB80t6XqsDA2QuSoCO0gQ",
+  authDomain: "storage-afb20.firebaseapp.com",
+  databaseURL: "https://storage-afb20-default-rtdb.firebaseio.com", 
+  projectId: "storage-afb20",
+  storageBucket: "storage-afb20.firebasestorage.app",
+  messagingSenderId: "209307491794",
+  appId: "1:209307491794:web:c7016982501fbd342cbc0b",
+  measurementId: "G-S8VLDJB41R"
+};
 
     const app = initializeApp(firebaseConfig);
     const storage = getStorage(app);
