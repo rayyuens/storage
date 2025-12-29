@@ -2,62 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Share + Individual Delete</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Instant Moments Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 500px; }
-        .upload-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        
-        #uploadBtn { background: #0084ff; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:disabled { background: #ccc; }
-
-        #previewContainer { display: none; width: 100%; margin: 10px 0; }
-        #previewImg { width: 100%; border-radius: 8px; border: 2px dashed #ddd; }
-
-        .post { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
-        .post img { width: 100%; border-radius: 8px; margin-top: 10px; }
-        .time { color: #888; font-size: 11px; }
-        
-        /* 刪除掣樣式 */
-        .delete-btn { 
-            position: absolute; top: 15px; right: 15px; 
-            color: #ff4d4f; cursor: pointer; font-size: 12px; font-weight: bold;
-            padding: 5px; opacity: 0.6;
+        :root {
+            --primary: #007AFF; --bg: #F2F2F7; --card: #FFFFFF;
+            --text: #1C1C1E; --success: #34C759; --danger: #FF3B30; --border: #D1D1D6;
         }
-        .delete-btn:hover { opacity: 1; text-decoration: underline; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg); color: var(--text); margin: 0; padding: 10px;
+            padding-bottom: 100px; /* Space for fixed bottom if needed */
+        }
+
+        .card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .card-title { font-size: 11px; font-weight: 800; color: #8E8E93; text-transform: uppercase; margin-bottom: 12px; display: block; }
+
+        input[type="text"] { 
+            padding: 12px; border-radius: 10px; border: 1.5px solid #E5E5EA; 
+            font-size: 15px; width: 100%; box-sizing: border-box; outline: none; margin-bottom: 10px;
+        }
+
+        /* 檔案選擇器美化 */
+        input[type="file"] { font-size: 13px; color: #8E8E93; margin-bottom: 10px; }
+
+        .btn-add { 
+            background: var(--primary); color: white; border: none; padding: 12px; 
+            border-radius: 12px; font-weight: 700; width: 100%; font-size: 15px; cursor: pointer;
+        }
+        .btn-add:disabled { background: #D1D1D6; }
+
+        /* 預覽區域 */
+        #previewContainer { display: none; margin-bottom: 10px; text-align: center; }
+        #previewImg { width: 100%; border-radius: 10px; border: 1px solid var(--border); }
+
+        /* 貼文樣式 */
+        .item-row { border-bottom: 1px solid #F2F2F7; padding: 15px 0; position: relative; }
+        .item-row:last-child { border-bottom: none; }
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .time { font-size: 11px; color: #8E8E93; font-weight: 500; }
+        .message-text { font-size: 16px; font-weight: 500; margin: 8px 0; line-height: 1.4; }
+        .post-img { width: 100%; border-radius: 12px; margin-top: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        
+        .delete-btn { 
+            background: #FF3B3015; color: var(--danger); border: none; 
+            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;
+        }
+
+        .header-section { text-align: center; padding: 20px 0 10px 0; }
+        .header-section h1 { font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="upload-card">
-        <h2>Share Moment</h2>
+<div class="header-section">
+    <h1>Moments</h1>
+    <div style="font-size: 10px; color: #8E8E93; margin-top: 4px;">● Cloud Synced (Supabase)</div>
+</div>
+
+<div class="container" style="max-width: 500px; margin: 0 auto;">
+    <div class="card">
+        <span class="card-title">Share Something</span>
         <input type="text" id="msg" placeholder="What's on your mind?">
         <input type="file" id="photo" accept="image/*">
+        
         <div id="previewContainer">
             <img id="previewImg" src="">
         </div>
-        <button id="uploadBtn">Post Now</button>
+
+        <button id="uploadBtn" class="btn-add">Post Now</button>
     </div>
 
-    <div id="feed">Loading feed...</div>
+    <div class="card">
+        <span class="card-title">Recent Updates</span>
+        <div id="feed">Loading...</div>
+    </div>
 </div>
 
 <script>
+    // 1. Supabase Configuration
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
-
     const db = supabase.createClient(SB_URL, SB_KEY);
+
     const uploadBtn = document.getElementById('uploadBtn');
     const photoInput = document.getElementById('photo');
     const previewContainer = document.getElementById('previewContainer');
     const previewImg = document.getElementById('previewImg');
     const feed = document.getElementById('feed');
 
-    // 預覽功能
+    // 2. Image Preview Logic
     photoInput.onchange = () => {
         const file = photoInput.files[0];
         if (file) {
@@ -67,39 +104,43 @@
                 previewContainer.style.display = 'block';
             }
             reader.readAsDataURL(file);
+        } else {
+            previewContainer.style.display = 'none';
         }
     };
 
-    // 渲染貼文
+    // 3. Render Posts
     function render(data) {
         if (!data || data.length === 0) {
-            feed.innerHTML = "<p style='text-align:center;color:#888;'>No posts yet.</p>";
+            feed.innerHTML = "<p style='text-align:center; font-size:13px; color:#8E8E93; padding:20px;'>No moments shared yet.</p>";
             return;
         }
         feed.innerHTML = data.map(p => `
-            <div class="post">
-                <span class="delete-btn" onclick="deletePost(${p.id})">Delete</span>
-                <div class="time">${new Date(p.created_at).toLocaleString()}</div>
-                <p>${p.message || ''}</p>
-                ${p.url ? `<img src="${p.url}">` : ''}
+            <div class="item-row">
+                <div class="item-header">
+                    <span class="time">${new Date(p.created_at).toLocaleString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'})}</span>
+                    <button class="delete-btn" onclick="deletePost(${p.id})">Delete</button>
+                </div>
+                <div class="message-text">${p.message || ''}</div>
+                ${p.url ? `<img src="${p.url}" class="post-img">` : ''}
             </div>
         `).join('');
     }
 
-    // 單獨刪除貼文功能
-    async function deletePost(id) {
-        if (!confirm("Delete this post?")) return;
-        const { error } = await db.from('posts').delete().eq('id', id);
-        if (error) alert("Error: " + error.message);
-        // 刪除後不需要手動呼叫 fetchPosts，Realtime 監聽會自動處理
-    }
-
+    // 4. Fetch Posts
     async function fetchPosts() {
-        const { data } = await db.from('posts').select('*').order('created_at', { ascending: false });
-        render(data);
+        const { data, error } = await db.from('posts').select('*').order('created_at', { ascending: false });
+        if (!error) render(data);
     }
 
-    // 上傳功能
+    // 5. Delete Post
+    async function deletePost(id) {
+        if (confirm("Delete this post?")) {
+            await db.from('posts').delete().eq('id', id);
+        }
+    }
+
+    // 6. Upload Action
     uploadBtn.onclick = async () => {
         const file = photoInput.files[0];
         const message = document.getElementById('msg').value;
@@ -118,18 +159,19 @@
             }
             await db.from('posts').insert([{ message, url: finalUrl }]);
             
+            // Success Reset
             document.getElementById('msg').value = '';
             photoInput.value = '';
             previewContainer.style.display = 'none';
         } catch (e) {
-            console.error(e);
+            alert("Error: " + e.message);
         } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerText = "Post Now";
         }
     };
 
-    // Realtime 監聽
+    // 7. Realtime Sync
     db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
         fetchPosts();
     }).subscribe();
