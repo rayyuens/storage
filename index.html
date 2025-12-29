@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Photo Share</title>
+    <title>Instant Share + Preview</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 500px; }
         .upload-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { margin-top: 0; color: #1c1e21; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { background: #0084ff; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #0073e6; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .post { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .post img { width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
-        .time { color: #888; font-size: 12px; margin-bottom: 5px; }
-        p { margin: 5px 0; line-height: 1.4; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        
+        /* 按鈕顏色 */
+        #uploadBtn { background: #0084ff; color: white; border: none; font-weight: bold; cursor: pointer; }
+        #clearBtn { background: #ff4d4f; color: white; border: none; font-size: 12px; cursor: pointer; margin-top: 10px; opacity: 0.7; }
+        #clearBtn:hover { opacity: 1; }
+        button:disabled { background: #ccc; }
+
+        /* 預覽圖樣式 */
+        #previewContainer { display: none; width: 100%; margin: 10px 0; }
+        #previewImg { width: 100%; border-radius: 8px; border: 2px dashed #ddd; }
+
+        .post { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+        .post img { width: 100%; border-radius: 8px; margin-top: 10px; }
+        .time { color: #888; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -26,11 +32,18 @@
     <div class="upload-card">
         <h2>Share Moment</h2>
         <input type="text" id="msg" placeholder="What's on your mind?">
+        
         <input type="file" id="photo" accept="image/*">
+        <div id="previewContainer">
+            <p style="font-size: 12px; color: #888;">Image Preview:</p>
+            <img id="previewImg" src="">
+        </div>
+
         <button id="uploadBtn">Post Now</button>
+        <button id="clearBtn">Delete All Messages</button>
     </div>
 
-    <div id="feed">Loading...</div>
+    <div id="feed">Loading feed...</div>
 </div>
 
 <script>
@@ -39,40 +52,49 @@
 
     const db = supabase.createClient(SB_URL, SB_KEY);
     const uploadBtn = document.getElementById('uploadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const photoInput = document.getElementById('photo');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImg = document.getElementById('previewImg');
     const feed = document.getElementById('feed');
 
-    async function fetchPosts() {
-        try {
-            const { data, error } = await db
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (error) throw error;
-            renderPosts(data);
-        } catch (err) {
-            feed.innerHTML = `<p style='color:red;'>Error: ${err.message}</p>`;
+    // --- Feature 2: Image Preview Logic ---
+    photoInput.onchange = () => {
+        const file = photoInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            previewContainer.style.display = 'none';
         }
-    }
+    };
 
-    function renderPosts(data) {
-        if (data.length === 0) {
-            feed.innerHTML = "<p style='text-align:center; color:#888;'>No posts yet. Be the first!</p>";
+    function render(data) {
+        if (!data || data.length === 0) {
+            feed.innerHTML = "<p style='text-align:center;color:#888;'>No posts yet.</p>";
             return;
         }
         feed.innerHTML = data.map(p => `
             <div class="post">
                 <div class="time">${new Date(p.created_at).toLocaleString()}</div>
                 <p>${p.message || ''}</p>
-                ${p.url ? `<img src="${p.url}" onerror="this.style.display='none'">` : ''}
+                ${p.url ? `<img src="${p.url}">` : ''}
             </div>
         `).join('');
     }
 
-    uploadBtn.onclick = async () => {
-        const file = document.getElementById('photo').files[0];
-        const message = document.getElementById('msg').value;
+    async function fetchPosts() {
+        const { data } = await db.from('posts').select('*').order('created_at', { ascending: false });
+        render(data);
+    }
 
+    uploadBtn.onclick = async () => {
+        const file = photoInput.files[0];
+        const message = document.getElementById('msg').value;
         if (!file && !message) return;
 
         uploadBtn.disabled = true;
@@ -82,40 +104,48 @@
             let finalUrl = null;
             if (file) {
                 const fileName = `${Date.now()}_${file.name}`;
-                const { error: storageError } = await db.storage
-                    .from('uploads')
-                    .upload(fileName, file);
-                if (storageError) throw storageError;
+                await db.storage.from('uploads').upload(fileName, file);
                 const { data: urlData } = db.storage.from('uploads').getPublicUrl(fileName);
                 finalUrl = urlData.publicUrl;
             }
 
-            const { error: dbError } = await db
-                .from('posts')
-                .insert([{ message: message, url: finalUrl }]);
+            await db.from('posts').insert([{ message, url: finalUrl }]);
 
-            if (dbError) throw dbError;
-
-            // Reset UI instantly
+            // Reset UI
             document.getElementById('msg').value = '';
-            document.getElementById('photo').value = '';
-            fetchPosts(); 
-
-        } catch (err) {
-            alert("Error: " + err.message);
+            photoInput.value = '';
+            previewContainer.style.display = 'none';
+        } catch (e) {
+            console.error(e);
         } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerText = "Post Now";
         }
     };
 
-    // ENABLE REALTIME: This makes it update instantly on all screens
-    db.channel('custom-all-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
-          console.log('Change received!', payload);
-          fetchPosts();
-      })
-      .subscribe();
+    // --- Feature 1: Delete All Messages ---
+    clearBtn.onclick = async () => {
+        if (!confirm("Are you sure you want to delete ALL messages? This cannot be undone.")) return;
+        
+        clearBtn.disabled = true;
+        clearBtn.innerText = "Deleting...";
+
+        try {
+            // Delete everything from 'posts' table
+            const { error } = await db.from('posts').delete().neq('id', 0); // Hack to delete all: delete where id is not 0
+            if (error) throw error;
+        } catch (e) {
+            alert("Delete failed: " + e.message);
+        } finally {
+            clearBtn.disabled = false;
+            clearBtn.innerText = "Delete All Messages";
+        }
+    };
+
+    // Realtime listener
+    db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+        fetchPosts();
+    }).subscribe();
 
     fetchPosts();
 </script>
