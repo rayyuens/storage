@@ -22,6 +22,7 @@
         --border: #dee2e6;
         --input-bg: #f0f4f9;
         --code-bg: #1e1e1e;
+        --gemini-blue: #4285f4;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -77,20 +78,15 @@
     .copy-btn { cursor: pointer; color: var(--primary); font-weight: 600; }
     .del-btn { color: #d93025; cursor: pointer; font-weight: 600; }
 
-    /* --- 摺疊邏輯修正區 --- */
     .content-wrapper {
         position: relative;
-        max-height: 200px; /* 初始最大高度 */
+        max-height: 200px; 
         overflow: hidden;
         transition: max-height 0.3s ease-out;
-        /* 移除 cursor: pointer，防止使用者以為 code block 可以點擊 */
     }
 
-    .content-wrapper.expanded {
-        max-height: none;
-    }
+    .content-wrapper.expanded { max-height: none; }
 
-    /* 漸層遮罩：只有當具備 has-overflow 且 尚未展開時才顯示 */
     .content-wrapper.has-overflow:not(.expanded)::after {
         content: "";
         position: absolute;
@@ -108,16 +104,9 @@
     }
 
     .expand-hint {
-        text-align: center;
-        color: var(--primary);
-        font-size: 12px;
-        font-weight: 600;
-        margin-top: 8px;
-        display: none; /* 預設隱藏，由 JS 判斷高度 */
-        cursor: pointer; /* 只有按鈕可以點擊 */
-        padding: 4px 0;
+        text-align: center; color: var(--primary); font-size: 12px;
+        font-weight: 600; margin-top: 8px; display: none; cursor: pointer; padding: 4px 0;
     }
-    /* -------------------- */
 
     .post-img { width: 100%; border-radius: 12px; margin-top: 12px; display: block; }
 
@@ -143,10 +132,32 @@
     .icon-btn { 
         background: transparent; border: none; width: 40px; height: 40px;
         border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        cursor: pointer; font-size: 18px;
+        cursor: pointer; font-size: 24px; color: var(--text-sub);
     }
 
-    .send-btn { background: #c2e7ff; color: #001d35; transition: 0.2s; }
+    .send-btn { 
+        background: #c2e7ff; color: #001d35; transition: 0.2s; 
+        font-size: 18px; position: relative;
+    }
+
+    /* --- Gemini 圓形進度條樣式 --- */
+    .spinner {
+        animation: rotate 2s linear infinite;
+        width: 24px;
+        height: 24px;
+    }
+    .spinner .path {
+        stroke: var(--primary);
+        stroke-linecap: round;
+        animation: dash 1.5s ease-in-out infinite;
+    }
+    @keyframes rotate { 100% { transform: rotate(360deg); } }
+    @keyframes dash {
+        0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+        50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+        100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+    }
+    /* ------------------------- */
 
     #previewContainer { display: none; padding: 10px; position: relative; }
     #previewImg { height: 50px; border-radius: 6px; }
@@ -185,7 +196,7 @@
         </div>
 
         <div class="wa-input-row">
-            <label for="photo" class="icon-btn">📎</label>
+            <label for="photo" class="icon-btn" style="font-weight: 300;">+</label>
             <input type="file" id="photo" style="display:none">
             <textarea id="msg" rows="1" placeholder="輸入訊息或代碼..." oninput="autoResize(this)"></textarea>
             <button id="uploadBtn" class="icon-btn send-btn">➤</button>
@@ -199,24 +210,9 @@
 </div>
 
 <script>
-    const APP_VERSION = '2.3'; 
+    const APP_VERSION = '2.4'; // 更新版號
 
-    function checkVersion() {
-        const lastVersion = localStorage.getItem('app_version');
-        if (lastVersion && lastVersion !== APP_VERSION) {
-            document.getElementById('updateBanner').style.display = 'block';
-        }
-        localStorage.setItem('app_version', APP_VERSION);
-    }
-
-    async function applyUpdate() {
-        if ('caches' in window) {
-            const keys = await caches.keys();
-            for (let key of keys) await caches.delete(key);
-        }
-        window.location.reload(true);
-    }
-
+    // --- 同之前的 Supabase 與基礎邏輯 ---
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -226,6 +222,13 @@
     const photoInput = document.getElementById('photo');
     const feed = document.getElementById('feed');
     const uploadBtn = document.getElementById('uploadBtn');
+
+    // 進度條 HTML 模板
+    const SPINNER_HTML = `
+        <svg class="spinner" viewBox="0 0 50 50">
+            <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+        </svg>
+    `;
 
     function autoResize(textarea) {
         textarea.style.height = 'auto';
@@ -249,12 +252,10 @@
         navigator.clipboard.writeText(text).then(() => showToast());
     }
 
-    // --- 修正後的切換函數 ---
     function toggleExpandById(id) {
         const wrapper = document.getElementById(`wrapper-${id}`);
         const hint = document.getElementById(`hint-${id}`);
         if (!wrapper || !hint) return;
-
         wrapper.classList.toggle('expanded');
         hint.innerText = wrapper.classList.contains('expanded') ? "點擊收起" : "點擊展開";
     }
@@ -262,19 +263,16 @@
     function checkOverflow() {
         document.querySelectorAll('.content-wrapper').forEach(wrapper => {
             const hint = wrapper.parentElement.querySelector('.expand-hint');
-            // 判斷內容是否超過 200px
-            if (wrapper.scrollHeight > 205) { // 205 作為緩衝，避免邊緣 case
+            if (wrapper.scrollHeight > 205) {
                 wrapper.classList.add('has-overflow');
                 if (hint) hint.style.display = 'block';
             } else {
-                // 如果是短內容，直接取消高度限制，不顯示漸層與按鈕
                 wrapper.style.maxHeight = 'none';
                 wrapper.classList.remove('has-overflow');
                 if (hint) hint.style.display = 'none';
             }
         });
     }
-    // ----------------------
 
     function setMode(mode) {
         uploadMode = mode;
@@ -326,10 +324,8 @@
         feed.innerHTML = data.map(p => {
             const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
             const isCode = p.message && (p.message.includes('</') || p.message.includes('=>') || p.message.includes('{') || p.message.includes('const ') || p.message.includes('function'));
-            
             const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
             const sanitizedMsg = escapeHTML(p.message);
-
             const contentHTML = isCode 
                 ? `<div class="code-block">${sanitizedMsg}</div>` 
                 : `<div style="white-space:pre-wrap; font-size:15px; line-height:1.5;">${sanitizedMsg}</div>`;
@@ -360,7 +356,6 @@
                 </div>
             `;
         }).join('');
-
         checkOverflow();
         feed.scrollTop = feed.scrollHeight;
     }
@@ -380,8 +375,9 @@
         const message = msgInput.value.trim();
         if (!file && !message) return;
 
+        // 切換為進度條狀態
         uploadBtn.disabled = true;
-        uploadBtn.innerHTML = "⌛";
+        uploadBtn.innerHTML = SPINNER_HTML;
 
         try {
             let url = null;
@@ -397,10 +393,27 @@
             clearPhoto();
             fetchPosts();
         } catch (e) { alert(e.message); } finally {
+            // 恢復為飛機圖示
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = "➤";
         }
     };
+
+    function checkVersion() {
+        const lastVersion = localStorage.getItem('app_version');
+        if (lastVersion && lastVersion !== APP_VERSION) {
+            document.getElementById('updateBanner').style.display = 'block';
+        }
+        localStorage.setItem('app_version', APP_VERSION);
+    }
+
+    async function applyUpdate() {
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            for (let key of keys) await caches.delete(key);
+        }
+        window.location.reload(true);
+    }
 
     window.addEventListener('load', checkVersion);
     db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
