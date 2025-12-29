@@ -1,311 +1,345 @@
 <!DOCTYPE html>
-<html lang="en">
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Instant Moments Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Instant Moments Pro</title>
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#007AFF">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1042/1042339.png">
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
 <style>
-:root {
---primary: #007AFF; --bg: #F2F2F7; --card: #FFFFFF;
---text: #1C1C1E; --success: #34C759; --danger: #FF3B30; --border: #D1D1D6;
-}
+    :root {
+        --primary: #1a73e8;
+        --bg: #ffffff;
+        --card-bg: #f8f9fa;
+        --text-main: #1f1f1f;
+        --text-sub: #70757a;
+        --border: #dee2e6;
+        --input-bg: #f0f4f9;
+    }
 
-body {
-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-background-color: var(--bg); color: var(--text); margin: 0; padding: 0;
-display: flex; flex-direction: column; height: 100vh;
-}
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-.header-section { 
-background: rgba(242, 242, 247, 0.8); backdrop-filter: blur(15px);
-text-align: center; padding: 12px 0; border-bottom: 1px solid var(--border);
-position: fixed; top: 0; width: 100%; z-index: 100;
-}
-.header-section h1 { font-size: 17px; font-weight: 700; margin: 0; }
+    body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        height: 100dvh;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg);
+        color: var(--text-main);
+        overflow: hidden;
+    }
 
-.feed-container { 
-flex: 1; overflow-y: auto; padding: 60px 12px 200px 12px; 
-max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box;
-display: flex; flex-direction: column;
-}
+    /* --- Header --- */
+    .header-section { 
+        padding: 16px 20px;
+        padding-top: calc(env(safe-area-inset-top) + 10px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--bg);
+        z-index: 10;
+    }
+    .header-section h1 { font-size: 20px; font-weight: 500; margin: 0; color: #444746; }
 
-        .item-row { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-        .item-row { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-.item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.time { font-size: 10px; color: #8E8E93; }
-.message-text { font-size: 15px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
-.post-img { width: 100%; border-radius: 8px; margin-top: 8px; display: block; border: 0.5px solid #eee; cursor: pointer; }
+    /* --- Feed Area --- */
+    .feed-container { 
+        flex: 1; 
+        overflow-y: auto; 
+        padding: 10px 20px;
+        scroll-behavior: smooth;
+    }
 
-.action-group { display: flex; gap: 8px; }
-.btn-link { background: none; border: none; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; }
-.delete-btn { color: var(--danger); background: #FF3B3010; }
-.download-btn { color: var(--primary); background: #007AFF10; }
+    /* Gemini Style Cards */
+    .item-row { 
+        background: var(--card-bg); 
+        border-radius: 24px; 
+        padding: 18px; 
+        margin-bottom: 16px; 
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+        transition: transform 0.2s ease;
+    }
 
-.wa-footer {
-position: fixed; bottom: 0; width: 100%; background: #F6F6F6;
-border-top: 1px solid var(--border); padding: 8px 12px 25px 12px;
-box-sizing: border-box; z-index: 100;
-}
-.wa-input-row { display: flex; align-items: flex-end; gap: 10px; max-width: 600px; margin: 0 auto; }
+    .item-header {
+        display: flex; justify-content: space-between;
+        font-size: 12px; color: var(--text-sub); margin-bottom: 10px;
+    }
 
-.input-container { 
-flex: 1; background: white; border-radius: 20px; border: 1px solid var(--border);
-padding: 5px 15px; display: flex; flex-direction: column;
-}
-.input-container textarea {
-border: none; outline: none; font-size: 15px; font-family: inherit;
-resize: none; padding: 8px 0; max-height: 120px;
-}
+    .code-block {
+        background: #1e1e1e; color: #d4d4d4;
+        padding: 16px; border-radius: 12px;
+        font-family: 'Consolas', monospace; font-size: 13px;
+        overflow-x: auto; margin: 10px 0;
+    }
 
-#qualitySelector { display: none; gap: 12px; font-size: 11px; color: #8E8E93; border-top: 1px solid #F2F2F7; padding: 8px 0; }
-        #qualitySelector span { cursor: pointer; padding: 2px 6px; border-radius: 4px; }
-        #qualitySelector span.active { color: var(--primary); font-weight: bold; background: #007AFF15; }
-        #qualitySelector span.active { color: var(--primary); font-weight: bold; background: #007AFF15; padding: 2px 6px; border-radius: 4px; }
+    .post-img { 
+        width: 100%; 
+        border-radius: 16px; 
+        margin-top: 12px;
+        object-fit: cover;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
 
-.icon-btn {
-background: var(--primary); color: white; border: none; width: 38px; height: 38px;
-border-radius: 50%; display: flex; align-items: center; justify-content: center;
-cursor: pointer; flex-shrink: 0; font-size: 16px;
-}
+    /* --- Footer / Input --- */
+    .wa-footer {
+        padding: 10px 20px;
+        padding-bottom: calc(env(safe-area-inset-bottom) + 15px);
+        background: var(--bg);
+        max-width: 850px;
+        width: 100%;
+        margin: 0 auto;
+    }
 
-        /* iOS 引導彈窗 */
-        #iosPrompt {
-            display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-            background: white; padding: 15px; border-radius: 15px; width: 85%; max-width: 320px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 2000; border: 1.5px solid var(--primary);
-        }
-        #iosPrompt::after {
-            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
-            border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 10px solid white;
-        }
+    .input-wrapper {
+        background: var(--input-bg);
+        border-radius: 32px;
+        padding: 8px 16px;
+        transition: background 0.3s;
+    }
+    
+    .input-wrapper:focus-within {
+        background: #e1e9f1;
+    }
 
-#previewContainer { 
-display: none; position: absolute; bottom: 100%; left: 12px; right: 12px;
-background: white; border-radius: 12px; padding: 10px; box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-margin-bottom: 8px; border: 1px solid var(--border);
-}
-#previewImg { height: 70px; border-radius: 6px; border: 1px solid #eee; }
-        .close-preview { position: absolute; top: 8px; right: 8px; background: #8E8E93; color: white; border-radius: 50%; width: 22px; height: 22px; border: none; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .close-preview { position: absolute; top: 8px; right: 8px; background: #8E8E93; color: white; border-radius: 50%; width: 22px; height: 22px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .wa-input-row { 
+        display: flex; 
+        align-items: flex-end; 
+        gap: 8px; 
+    }
+    
+    textarea {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 16px;
+        padding: 12px 4px;
+        max-height: 150px;
+        resize: none;
+        background: transparent;
+        line-height: 1.5;
+        color: var(--text-main);
+    }
+
+    /* --- Action Buttons --- */
+    .icon-btn { 
+        background: transparent;
+        border: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 20px;
+        transition: background 0.2s;
+    }
+
+    .icon-btn:hover { background: rgba(0,0,0,0.05); }
+
+    .send-btn {
+        background: #c2e7ff;
+        color: #001d35;
+    }
+    
+    .send-btn:disabled { opacity: 0.5; }
+
+    /* Quality & Previews */
+    #previewContainer {
+        display: none; padding: 12px; position: relative;
+    }
+    #previewImg { height: 60px; border-radius: 8px; border: 1px solid var(--border); }
+
+    #qualitySelector { 
+        display: none; font-size: 12px; gap: 15px; 
+        padding: 8px 0; margin-left: 5px;
+    }
+    .q-chip { cursor: pointer; color: var(--text-sub); }
+    .q-chip.active { color: var(--primary); font-weight: 600; }
+
 </style>
 </head>
 <body>
 
-<div id="iosPrompt">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/1042/1042339.png" width="40">
-        <div style="font-size: 13px;">
-            想用全屏 App 體驗？撳底邊嘅 <b>分享掣</b>，再揀 <b>「加至主畫面」</b>。
-        </div>
-        <button onclick="document.getElementById('iosPrompt').style.display='none'" style="border:none; background:none; font-size:18px;">✕</button>
-    </div>
-</div>
-
 <div class="header-section">
-<h1>Moments Feed</h1>
+    <h1>Moments</h1>
+    <div style="width: 32px; height: 32px; background: linear-gradient(45deg, #4285f4, #9b72cb); border-radius: 50%;"></div>
 </div>
 
 <div class="feed-container" id="feed">
-<p style="text-align:center; color:#8E8E93; padding: 40px;">Syncing messages...</p>
-</div>
+    </div>
 
 <div class="wa-footer">
-<div id="previewContainer">
-<button class="close-preview" onclick="clearPhoto()">✕</button>
-<img id="previewImg" src="">
-<div id="fileNameDisplay" style="font-size: 10px; color: #8E8E93; margin-top: 5px; overflow: hidden; text-overflow: ellipsis;"></div>
-</div>
+    <div class="input-wrapper">
+        <div id="previewContainer">
+            <button onclick="clearPhoto()" style="position:absolute; left: 65px; top:8px; border:none; background:#444746; color:white; border-radius:50%; width:20px; height:20px; font-size:10px;">✕</button>
+            <img id="previewImg" src="">
+        </div>
 
-<div class="wa-input-row">
-<label for="photo" style="cursor: pointer; font-size: 22px; margin-bottom: 6px;">📎</label>
-<input type="file" id="photo" style="display:none">
+        <div class="wa-input-row">
+            <label for="photo" class="icon-btn">➕</label>
+            <input type="file" id="photo" style="display:none">
 
-<div class="input-container">
-<textarea id="msg" rows="1" placeholder="Message" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-<div id="qualitySelector">
-<span style="padding-left:0; color:#444;">Photo Quality:</span>
-<span id="modeCompress" class="active" onclick="setMode('compress')">⚡ Compress</span>
-<span id="modeRaw" onclick="setMode('raw')">💎 Raw</span>
-</div>
-</div>
+            <textarea id="msg" rows="1" placeholder="Type a message..." oninput="autoResize(this)"></textarea>
 
-<button id="uploadBtn" class="icon-btn">➤</button>
-</div>
+            <button id="uploadBtn" class="icon-btn send-btn">➤</button>
+        </div>
+        
+        <div id="qualitySelector">
+            <span id="modeCompress" class="q-chip active" onclick="setMode('compress')">⚡ Fast</span>
+            <span id="modeRaw" class="q-chip" onclick="setMode('raw')">💎 HD</span>
+        </div>
+    </div>
 </div>
 
 <script>
-const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
-const db = supabase.createClient(SB_URL, SB_KEY);
+    const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
+    const db = supabase.createClient(SB_URL, SB_KEY);
 
-let uploadMode = 'compress';
-const msgInput = document.getElementById('msg');
-const photoInput = document.getElementById('photo');
-const previewContainer = document.getElementById('previewContainer');
-const previewImg = document.getElementById('previewImg');
-const qualitySelector = document.getElementById('qualitySelector');
-const feed = document.getElementById('feed');
-const uploadBtn = document.getElementById('uploadBtn');
+    let uploadMode = 'compress';
+    const msgInput = document.getElementById('msg');
+    const photoInput = document.getElementById('photo');
+    const feed = document.getElementById('feed');
+    const uploadBtn = document.getElementById('uploadBtn');
 
-function setMode(mode) {
-uploadMode = mode;
-document.getElementById('modeCompress').classList.toggle('active', mode === 'compress');
-document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
-}
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+    }
 
-    // 智能下載：從 URL 解析檔名並移除時間戳
-async function downloadFile(url) {
-try {
-const urlParts = url.split('/');
-const rawName = urlParts[urlParts.length - 1];
-            // 移除上傳時加上的數字前綴 (例如 17354321_photo.jpg -> photo.jpg)
-const cleanName = rawName.includes('_') ? rawName.split('_').slice(1).join('_') : rawName;
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        }[m]));
+    }
 
-const res = await fetch(url);
-const blob = await res.blob();
-const blobUrl = window.URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = blobUrl;
-a.download = decodeURIComponent(cleanName);
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-window.URL.revokeObjectURL(blobUrl);
-        } catch (e) {
-            window.open(url, '_blank');
+    function setMode(mode) {
+        uploadMode = mode;
+        document.getElementById('modeCompress').classList.toggle('active', mode === 'compress');
+        document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
+    }
+
+    photoInput.onchange = () => {
+        const file = photoInput.files[0];
+        if (file) {
+            document.getElementById('previewContainer').style.display = 'block';
+            document.getElementById('qualitySelector').style.display = 'flex';
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => { document.getElementById('previewImg').src = e.target.result; }
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('previewImg').src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
+            }
         }
-        } catch (e) { window.open(url, '_blank'); }
-}
+    };
 
-photoInput.onchange = () => {
-const file = photoInput.files[0];
-if (file) {
-document.getElementById('fileNameDisplay').innerText = file.name;
-if (file.type.startsWith('image/')) {
-const reader = new FileReader();
-reader.onload = (e) => {
-previewImg.src = e.target.result;
-previewContainer.style.display = 'block';
-qualitySelector.style.display = 'flex';
-}
-reader.readAsDataURL(file);
-} else {
-previewImg.src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
-previewContainer.style.display = 'block';
-qualitySelector.style.display = 'none';
-}
-}
-};
+    function clearPhoto() {
+        photoInput.value = '';
+        document.getElementById('previewContainer').style.display = 'none';
+        document.getElementById('qualitySelector').style.display = 'none';
+    }
 
-function clearPhoto() {
-photoInput.value = '';
-previewContainer.style.display = 'none';
-qualitySelector.style.display = 'none';
-}
-
-async function compressImage(file) {
-return new Promise((resolve) => {
-const reader = new FileReader();
-reader.readAsDataURL(file);
-reader.onload = (e) => {
-const img = new Image();
-img.src = e.target.result;
-img.onload = () => {
-const canvas = document.createElement('canvas');
-const MAX = 1200;
-let w = img.width, h = img.height;
-if (w > MAX) { h *= MAX/w; w = MAX; }
-canvas.width = w; canvas.height = h;
-canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-canvas.toBlob(b => resolve(b), 'image/jpeg', 0.7);
-};
-};
-});
-}
-
-function render(data) {
-if (!data || data.length === 0) {
-feed.innerHTML = "<p style='text-align:center; color:#8E8E93; padding: 40px;'>No messages here.</p>";
-return;
-}
-feed.innerHTML = data.map(p => `
-           <div class="item-row">
-               <div class="item-header">
-                   <span class="time">${new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'})}</span>
-                   <div class="action-group">
-                       ${p.url ? `<button class="btn-link download-btn" onclick="downloadFile('${p.url}')">💾 Download</button>` : ''}
-                       <button class="btn-link delete-btn" onclick="deletePost(${p.id})">🗑 Delete</button>
-                   </div>
-               </div>
-               <div class="message-text">${p.message || ''}</div>
-               ${p.url ? (p.url.match(/\.(jpg|jpeg|png|gif|webp|bmp)/i) ? `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}', '_blank')">` : `<div style="margin-top:10px; padding:10px; background:#F2F2F7; border-radius:8px; display:flex; align-items:center; gap:8px;">📄 <span style="font-size:12px; color:var(--primary); font-weight:600;">Document Attached</span></div>`) : ''}
-           </div>
-       `).join('');
-feed.scrollTop = feed.scrollHeight;
-}
-
-async function fetchPosts() {
-const { data } = await db.from('posts').select('*').order('created_at', { ascending: true });
-render(data);
-}
-
-async function deletePost(id) {
-if (confirm("Delete this message?")) await db.from('posts').delete().eq('id', id);
-}
-
-uploadBtn.onclick = async () => {
-const file = photoInput.files[0];
-const message = msgInput.value.trim();
-if (!file && !message) return;
-
-uploadBtn.disabled = true;
-uploadBtn.innerText = "..";
-
-try {
-let finalUrl = null;
-if (file) {
-let uploadFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
-const fileName = `${Date.now()}_${file.name}`;
-await db.storage.from('uploads').upload(fileName, uploadFile);
-const { data: urlData } = db.storage.from('uploads').getPublicUrl(fileName);
-finalUrl = urlData.publicUrl;
-}
-await db.from('posts').insert([{ message, url: finalUrl }]);
-            
-msgInput.value = '';
-msgInput.style.height = 'auto';
-clearPhoto();
-} catch (e) { alert("Error: " + e.message); } finally {
-uploadBtn.disabled = false;
-uploadBtn.innerText = "➤";
-}
-};
-
-db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
-fetchPosts();
-
-    // PWA & iOS 引導邏輯
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
+    async function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 1200;
+                    let w = img.width, h = img.height;
+                    if (w > MAX) { h *= MAX/w; w = MAX; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    canvas.toBlob(b => resolve(b), 'image/jpeg', 0.8);
+                };
+            };
         });
     }
 
-    const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-    if (isIos && !isStandalone) {
-        document.getElementById('iosPrompt').style.display = 'block';
+    function render(data) {
+        if (!data) return;
+        feed.innerHTML = data.map(p => {
+            const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
+            const isCode = p.message && (p.message.includes('const') || p.message.includes('function') || p.message.includes('{'));
+            
+            const content = isCode 
+                ? `<div class="code-block">${escapeHTML(p.message)}</div>` 
+                : `<div style="white-space:pre-wrap; font-size:15px; line-height:1.6;">${escapeHTML(p.message)}</div>`;
+
+            let attachment = '';
+            if (p.url) {
+                if (p.url.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
+                    attachment = `<img src="${p.url}" class="post-img" onclick="window.open('${p.url}')">`;
+                } else {
+                    attachment = `<div style="margin-top:12px; padding:12px; background:#fff; border-radius:12px; font-size:13px; border:1px solid var(--border);">📄 ${p.url.split('/').pop()}</div>`;
+                }
+            }
+
+            return `
+                <div class="item-row">
+                    <div class="item-header">
+                        <span>${time}</span>
+                        <span onclick="deletePost(${p.id})" style="color:#d93025; cursor:pointer;">Delete</span>
+                    </div>
+                    ${content}
+                    ${attachment}
+                </div>
+            `;
+        }).join('');
+        feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
     }
+
+    async function fetchPosts() {
+        const { data } = await db.from('posts').select('*').order('created_at', { ascending: true });
+        render(data);
+    }
+
+    async function deletePost(id) {
+        if (confirm("Delete this?")) {
+            await db.from('posts').delete().eq('id', id);
+            fetchPosts();
+        }
+    }
+
+    uploadBtn.onclick = async () => {
+        const file = photoInput.files[0];
+        const message = msgInput.value.trim();
+        if (!file && !message) return;
+
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = "...";
+
+        try {
+            let url = null;
+            if (file) {
+                const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
+                const path = `${Date.now()}_${file.name}`;
+                await db.storage.from('uploads').upload(path, finalFile);
+                url = db.storage.from('uploads').getPublicUrl(path).data.publicUrl;
+            }
+            await db.from('posts').insert([{ message, url }]);
+            msgInput.value = '';
+            msgInput.style.height = 'auto';
+            clearPhoto();
+            fetchPosts();
+        } catch (e) { alert(e.message); } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = "➤";
+        }
+    };
+
+    db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
+    fetchPosts();
 </script>
 
 </body>
