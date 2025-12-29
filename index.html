@@ -52,7 +52,6 @@
         scroll-behavior: smooth;
     }
 
-    /* Gemini-style Message Bubbles */
     .item-row { 
         background: var(--card-bg); 
         border-radius: 20px; 
@@ -62,6 +61,7 @@
         margin-left: auto;
         margin-right: auto;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        position: relative;
     }
 
     .item-header {
@@ -70,7 +70,14 @@
         text-transform: uppercase; letter-spacing: 0.5px;
     }
 
-    /* Code Block - Protected from UI interference */
+    .action-row {
+        display: flex; gap: 15px; align-items: center;
+    }
+
+    .copy-badge {
+        cursor: pointer; color: var(--primary); font-weight: 600;
+    }
+
     .code-block {
         background: var(--code-bg); 
         color: #d4d4d4;
@@ -80,9 +87,10 @@
         font-size: 13px;
         overflow-x: auto; 
         margin: 10px 0;
-        white-space: pre; /* Keeps code formatting */
+        white-space: pre;
         border: 1px solid #333;
         line-height: 1.5;
+        position: relative;
     }
 
     .post-img { 
@@ -121,7 +129,6 @@
     }
 
     .send-btn { background: #c2e7ff; color: #001d35; transition: 0.2s; }
-    .send-btn:active { transform: scale(0.95); }
 
     #previewContainer { display: none; padding: 10px; position: relative; }
     #previewImg { height: 50px; border-radius: 6px; }
@@ -132,9 +139,18 @@
     }
     .q-chip { cursor: pointer; color: var(--text-sub); padding: 2px 8px; border-radius: 10px; }
     .q-chip.active { background: #fff; color: var(--primary); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    
+    /* Toast notification */
+    .toast {
+        position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+        background: #323232; color: white; padding: 8px 16px; border-radius: 20px;
+        font-size: 12px; z-index: 1000; display: none;
+    }
 </style>
 </head>
 <body>
+
+<div id="toast" class="toast">Copied to clipboard</div>
 
 <div class="header-section">
     <h1>Whatsup</h1>
@@ -180,12 +196,26 @@
         textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
     }
 
-    // CRITICAL FIX: Escapes all HTML characters to prevent UI messing up
     function escapeHTML(str) {
         if (!str) return '';
         return str.replace(/[&<>"']/g, m => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
         }[m]));
+    }
+
+    function showToast() {
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2000);
+    }
+
+    async function copyText(btn, text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast();
+        } catch (err) {
+            console.error('Failed to copy', err);
+        }
     }
 
     function setMode(mode) {
@@ -199,13 +229,11 @@
         if (file) {
             document.getElementById('previewContainer').style.display = 'block';
             document.getElementById('qualitySelector').style.display = 'flex';
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => { document.getElementById('previewImg').src = e.target.result; }
-                reader.readAsDataURL(file);
-            } else {
-                document.getElementById('previewImg').src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
+            const reader = new FileReader();
+            reader.onload = (e) => { 
+                document.getElementById('previewImg').src = file.type.startsWith('image/') ? e.target.result : 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
             }
+            reader.readAsDataURL(file);
         }
     };
 
@@ -239,12 +267,12 @@
         if (!data) return;
         feed.innerHTML = data.map(p => {
             const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
-            
-            // Heuristic to detect code: includes common programming characters
             const isCode = p.message && (p.message.includes('</') || p.message.includes('=>') || p.message.includes('{') || p.message.includes('const '));
             
-            // We escape the HTML FIRST, then wrap it in the code div
+            // Prepare raw text for copying
+            const rawMessage = p.message ? p.message.replace(/'/g, "\\'") : "";
             const sanitizedMsg = escapeHTML(p.message);
+
             const content = isCode 
                 ? `<div class="code-block">${sanitizedMsg}</div>` 
                 : `<div style="white-space:pre-wrap; font-size:15px; line-height:1.5;">${sanitizedMsg}</div>`;
@@ -262,7 +290,10 @@
                 <div class="item-row">
                     <div class="item-header">
                         <span>${time}</span>
-                        <span onclick="deletePost(${p.id})" style="color:#d93025; cursor:pointer; font-weight:600;">Delete</span>
+                        <div class="action-row">
+                            <span class="copy-badge" onclick="copyText(this, \`${rawMessage}\`)">Copy</span>
+                            <span onclick="deletePost(${p.id})" style="color:#d93025; cursor:pointer; font-weight:600;">Delete</span>
+                        </div>
                     </div>
                     ${content}
                     ${attachment}
@@ -278,10 +309,9 @@
     }
 
     async function deletePost(id) {
-        if (confirm("Permanently delete this?")) {
-            await db.from('posts').delete().eq('id', id);
-            fetchPosts();
-        }
+        // Confirmation removed as per request
+        await db.from('posts').delete().eq('id', id);
+        fetchPosts();
     }
 
     uploadBtn.onclick = async () => {
