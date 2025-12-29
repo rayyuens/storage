@@ -1,9 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Instant Moments Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#007AFF">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1042/1042339.png">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -31,7 +38,7 @@
             display: flex; flex-direction: column;
         }
 
-        .item-row { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+        .item-row { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .time { font-size: 10px; color: #8E8E93; }
         .message-text { font-size: 15px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
@@ -59,13 +66,23 @@
         }
 
         #qualitySelector { display: none; gap: 12px; font-size: 11px; color: #8E8E93; border-top: 1px solid #F2F2F7; padding: 8px 0; }
-        #qualitySelector span { cursor: pointer; padding: 2px 6px; border-radius: 4px; }
-        #qualitySelector span.active { color: var(--primary); font-weight: bold; background: #007AFF15; }
+        #qualitySelector span.active { color: var(--primary); font-weight: bold; background: #007AFF15; padding: 2px 6px; border-radius: 4px; }
 
         .icon-btn {
             background: var(--primary); color: white; border: none; width: 38px; height: 38px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             cursor: pointer; flex-shrink: 0; font-size: 16px;
+        }
+
+        /* iOS 引導彈窗 */
+        #iosPrompt {
+            display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 15px; border-radius: 15px; width: 85%; max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 2000; border: 1.5px solid var(--primary);
+        }
+        #iosPrompt::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 10px solid white;
         }
 
         #previewContainer { 
@@ -74,10 +91,20 @@
             margin-bottom: 8px; border: 1px solid var(--border);
         }
         #previewImg { height: 70px; border-radius: 6px; border: 1px solid #eee; }
-        .close-preview { position: absolute; top: 8px; right: 8px; background: #8E8E93; color: white; border-radius: 50%; width: 22px; height: 22px; border: none; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .close-preview { position: absolute; top: 8px; right: 8px; background: #8E8E93; color: white; border-radius: 50%; width: 22px; height: 22px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     </style>
 </head>
 <body>
+
+<div id="iosPrompt">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/1042/1042339.png" width="40">
+        <div style="font-size: 13px;">
+            想用全屏 App 體驗？撳底邊嘅 <b>分享掣</b>，再揀 <b>「加至主畫面」</b>。
+        </div>
+        <button onclick="document.getElementById('iosPrompt').style.display='none'" style="border:none; background:none; font-size:18px;">✕</button>
+    </div>
+</div>
 
 <div class="header-section">
     <h1>Moments Feed</h1>
@@ -131,14 +158,11 @@
         document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
     }
 
-    // 智能下載：從 URL 解析檔名並移除時間戳
     async function downloadFile(url) {
         try {
             const urlParts = url.split('/');
             const rawName = urlParts[urlParts.length - 1];
-            // 移除上傳時加上的數字前綴 (例如 17354321_photo.jpg -> photo.jpg)
             const cleanName = rawName.includes('_') ? rawName.split('_').slice(1).join('_') : rawName;
-
             const res = await fetch(url);
             const blob = await res.blob();
             const blobUrl = window.URL.createObjectURL(blob);
@@ -149,9 +173,7 @@
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(blobUrl);
-        } catch (e) {
-            window.open(url, '_blank');
-        }
+        } catch (e) { window.open(url, '_blank'); }
     }
 
     photoInput.onchange = () => {
@@ -234,10 +256,8 @@
         const file = photoInput.files[0];
         const message = msgInput.value.trim();
         if (!file && !message) return;
-
         uploadBtn.disabled = true;
         uploadBtn.innerText = "..";
-
         try {
             let finalUrl = null;
             if (file) {
@@ -248,7 +268,6 @@
                 finalUrl = urlData.publicUrl;
             }
             await db.from('posts').insert([{ message, url: finalUrl }]);
-            
             msgInput.value = '';
             msgInput.style.height = 'auto';
             clearPhoto();
@@ -260,6 +279,19 @@
 
     db.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
     fetchPosts();
+
+    // PWA & iOS 引導邏輯
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
+        });
+    }
+
+    const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    if (isIos && !isStandalone) {
+        document.getElementById('iosPrompt').style.display = 'block';
+    }
 </script>
 
 </body>
