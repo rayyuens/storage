@@ -459,13 +459,26 @@
 
     // AI Explain Function
     async function explainMsg(id) {
-        const textContent = document.getElementById(`wrapper-${id}`).innerText;
+        console.log("1. 開始執行 explainMsg, ID:", id);
         
-        // 直接定義你要叫嘅 URL
-        const functionUrl = `${SB_URL}/functions/v1/explain-ai`;
-    
         try {
-            const response = await fetch(functionUrl, {
+            const wrapper = document.getElementById(`wrapper-${id}`);
+            if (!wrapper) {
+                console.error("2. 錯誤：搵唔到 ID 為 wrapper-" + id + " 的元素");
+                return;
+            }
+            
+            const textContent = wrapper.innerText;
+            console.log("3. 攞到文字內容:", textContent);
+    
+            // 檢查變數
+            if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') {
+                throw new Error("SB_URL 或 SB_KEY 未定義");
+            }
+    
+            console.log("4. 準備發送請求至:", `${SB_URL}/functions/v1/explain-ai`);
+    
+            const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -475,16 +488,14 @@
                 body: JSON.stringify({ text: textContent })
             });
     
+            console.log("5. 伺服器回應狀態:", response.status);
+    
             const data = await response.json();
-            
-            if (data.explanation) {
-                alert("🤖 AI 解釋：\n\n" + data.explanation);
-            } else {
-                alert("AI 回應格式錯誤，請檢查 Logs");
-            }
+            alert("🤖 AI 回應：\n\n" + data.explanation);
+    
         } catch (e) {
-            console.error("Fetch Error:", e);
-            alert("連線失敗，請檢查網路或 API Key");
+            console.error("❌ 捕捉到錯誤:", e); // 呢行好重要，睇 Console 會話你知係邊一行出事
+            alert("錯誤詳情: " + e.message);
         }
     }
 
