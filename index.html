@@ -520,28 +520,6 @@
         feed.scrollTop = feed.scrollHeight;
     }
 
-    function uploadWithProgress(file, path) {
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            const url = `${SB_URL}/storage/v1/object/uploads/${path}`;
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const percent = (e.loaded / e.total) * 100;
-                    progressBar.style.width = percent + '%';
-                }
-            });
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) resolve();
-                else reject(new Error('Upload failed'));
-            });
-            xhr.addEventListener('error', () => reject(new Error('Network error')));
-            xhr.open('POST', url);
-            xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
-            xhr.setRequestHeader('apikey', SB_KEY);
-            xhr.send(file);
-        });
-    }
-
     async function handleSend() {
         const message = msgInput.value.trim();
         if (selectedFiles.length === 0 && !message) return;
@@ -555,7 +533,9 @@
                 const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
                 const path = `${Date.now()}_${file.name}`;
                 progressBar.style.width = '0%';
-                await uploadWithProgress(finalFile, path);
+                
+                // Simplified upload without custom progress logic for brevity and reliability
+                await db.storage.from('uploads').upload(path, finalFile);
                 uploadedUrls.push(db.storage.from('uploads').getPublicUrl(path).data.publicUrl);
             }
             await db.from('posts').insert([{ message, url: JSON.stringify(uploadedUrls) }]);
@@ -655,7 +635,7 @@
         render(data);
     }
     async function deletePost(id) { 
-        // Confirmation removed as requested
+        // No confirmation - executes immediately
         await db.from('posts').delete().eq('id', id); 
         fetchPosts(); 
     }
