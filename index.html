@@ -52,6 +52,7 @@
         --shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         --radius-lg: 16px;
         --radius-xl: 24px;
+        --ai-purple: #8b5cf6;
     }
 
     [data-theme="dark"] {
@@ -126,11 +127,13 @@
     .item-time { display: flex; align-items: center; gap: 6px; }
     .item-time::before { content:''; width: 6px; height: 6px; background: var(--border); border-radius: 50%; }
 
-    .action-row { display: flex; gap: 8px; align-items: center; }
+    .action-row { display: flex; gap: 6px; align-items: center; }
     .action-btn { 
         cursor: pointer; font-size: 11px; padding: 4px 10px; border-radius: 20px; 
         font-weight: 600; transition: all 0.2s; 
     }
+    .ai-btn { background: rgba(139, 92, 246, 0.1); color: var(--ai-purple); border: 1px solid rgba(139, 92, 246, 0.2); }
+    .ai-btn:hover { background: var(--ai-purple); color: white; }
     .copy-btn { background: rgba(59, 130, 246, 0.1); color: var(--primary); }
     .copy-btn:hover { background: var(--primary); color: white; }
     .del-btn { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
@@ -363,7 +366,7 @@
 </div>
 
 <script>
-    const APP_VERSION = '4.1'; 
+    const APP_VERSION = '4.2'; 
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -454,6 +457,34 @@
         }
     }
 
+    // AI Explain Function
+    async function explainMsg(id) {
+        const wrapper = document.getElementById(`wrapper-${id}`);
+        const textContent = wrapper.innerText;
+        
+        // Find the first image if it exists in this post
+        const imgElement = wrapper.parentElement.querySelector('.post-img');
+        const imageUrl = imgElement ? imgElement.src : null;
+
+        showToast("🤖 AI Thinking (廣東話分析中)...");
+
+        try {
+            // Call Supabase Edge Function
+            const { data, error } = await db.functions.invoke('explain-ai', {
+                body: { text: textContent, imageUrl: imageUrl }
+            });
+
+            if (error) throw error;
+
+            // Display in a simple browser alert for now
+            alert("🤖 AI Explanation:\n\n" + data.explanation);
+            
+        } catch (e) {
+            console.error(e);
+            showToast("AI Error: " + e.message);
+        }
+    }
+
     function render(data) {
         if (!data) return;
         feed.innerHTML = data.map(p => {
@@ -502,6 +533,7 @@
                     <div class="item-header">
                         <div class="item-time">${time}</div>
                         <div class="action-row">
+                            <span class="action-btn ai-btn" onclick="explainMsg(${p.id})">AI Explain</span>
                             <span class="action-btn copy-btn" onclick="copySafe('${safeBase64}')">Copy</span>
                             <span class="action-btn del-btn" onclick="deletePost(${p.id})">Delete</span>
                         </div>
@@ -533,8 +565,6 @@
                 const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
                 const path = `${Date.now()}_${file.name}`;
                 progressBar.style.width = '0%';
-                
-                // Simplified upload without custom progress logic for brevity and reliability
                 await db.storage.from('uploads').upload(path, finalFile);
                 uploadedUrls.push(db.storage.from('uploads').getPublicUrl(path).data.publicUrl);
             }
@@ -635,7 +665,6 @@
         render(data);
     }
     async function deletePost(id) { 
-        // No confirmation - executes immediately
         await db.from('posts').delete().eq('id', id); 
         fetchPosts(); 
     }
