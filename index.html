@@ -459,29 +459,32 @@
 
     // AI Explain Function
     async function explainMsg(id) {
-        const wrapper = document.getElementById(`wrapper-${id}`);
-        const textContent = wrapper.innerText;
+        const textContent = document.getElementById(`wrapper-${id}`).innerText;
         
-        // Find the first image if it exists in this post
-        const imgElement = wrapper.parentElement.querySelector('.post-img');
-        const imageUrl = imgElement ? imgElement.src : null;
-
-        showToast("🤖 AI Thinking (廣東話分析中)...");
-
+        // 直接定義你要叫嘅 URL
+        const functionUrl = `${SB_URL}/functions/v1/explain-ai`;
+    
         try {
-            // Call Supabase Edge Function
-            const { data, error } = await db.functions.invoke('explain-ai', {
-                body: { text: textContent, imageUrl: imageUrl }
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SB_KEY}`,
+                    'apikey': SB_KEY
+                },
+                body: JSON.stringify({ text: textContent })
             });
-
-            if (error) throw error;
-
-            // Display in a simple browser alert for now
-            alert("🤖 AI Explanation:\n\n" + data.explanation);
+    
+            const data = await response.json();
             
+            if (data.explanation) {
+                alert("🤖 AI 解釋：\n\n" + data.explanation);
+            } else {
+                alert("AI 回應格式錯誤，請檢查 Logs");
+            }
         } catch (e) {
-            console.error(e);
-            showToast("AI Error: " + e.message);
+            console.error("Fetch Error:", e);
+            alert("連線失敗，請檢查網路或 API Key");
         }
     }
 
