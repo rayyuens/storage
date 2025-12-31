@@ -15,6 +15,24 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.min.css">
+    <script type="module">
+        import PhotoSwipeLightbox from 'https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe-lightbox.esm.min.js';
+        const lightbox = new PhotoSwipeLightbox({
+            gallery: '#feed',
+            children: 'a.pswp-link',
+            pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js')
+        });
+        lightbox.init();
+        window.psLightbox = lightbox;
+    </script>
     
 <style>
     :root {
@@ -97,7 +115,7 @@
 
     .content-wrapper {
         position: relative;
-        max-height: 200px; 
+        max-height: 250px; 
         overflow: hidden;
         transition: max-height 0.3s ease-out;
     }
@@ -111,11 +129,12 @@
         pointer-events: none;
     }
 
-    .code-block {
-        background: var(--code-bg); color: var(--code-text); padding: 14px; 
-        border-radius: 12px; font-family: 'Courier New', monospace; 
-        font-size: 13px; overflow-x: auto; margin: 10px 0;
-        white-space: pre; border: 1px solid var(--border); line-height: 1.5;
+    /* Prism Override */
+    pre[class*="language-"] {
+        margin: 10px 0 !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        background: #1e1e1e !important;
     }
 
     .expand-hint {
@@ -144,6 +163,7 @@
     .dl-icon { 
         cursor: pointer; font-size: 18px; padding: 4px;
         border-radius: 50%; transition: background 0.2s;
+        z-index: 5;
     }
     .dl-icon:hover { background: rgba(0,0,0,0.1); }
 
@@ -256,7 +276,7 @@
 </div>
 
 <script>
-    const APP_VERSION = '3.1'; 
+    const APP_VERSION = '4.0'; 
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -318,7 +338,6 @@
         } catch(e) { return "未知檔案"; }
     }
 
-    // --- 新增：強制下載函數 ---
     async function downloadFile(url, filename) {
         try {
             const res = await fetch(url);
@@ -331,7 +350,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(a.href);
         } catch (e) {
-            window.open(url, '_blank'); // 如果 fetch 失敗（例如跨域問題），則直接打開
+            window.open(url, '_blank');
         }
     }
 
@@ -339,7 +358,8 @@
         if (!data) return;
         feed.innerHTML = data.map(p => {
             const time = new Date(p.created_at).toLocaleString([], {hour:'2-digit', minute:'2-digit'});
-            const isCode = p.message && (p.message.includes('=>') || p.message.includes('{') || p.message.includes('const '));
+            // 進階 Code 偵測
+            const isCode = p.message && (p.message.includes('=>') || p.message.includes('{') || p.message.includes('const ') || p.message.includes('import ') || p.message.includes('<div'));
             const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
             
             let urls = [];
@@ -353,8 +373,10 @@
             if (imgs.length > 0) {
                 attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `
                     <div style="position:relative">
-                        <img src="${u}" class="post-img" onclick="window.open('${u}')">
-                        <span class="dl-icon" style="position:absolute; bottom:5px; right:5px; background:white; box-shadow:0 2px 5px rgba(0,0,0,0.2)" onclick="downloadFile('${u}')">📥</span>
+                        <a href="${u}" class="pswp-link" data-pswp-width="1200" data-pswp-height="1200" target="_blank">
+                            <img src="${u}" class="post-img">
+                        </a>
+                        <span class="dl-icon" style="position:absolute; bottom:10px; right:10px; background:white; box-shadow:0 2px 5px rgba(0,0,0,0.2)" onclick="downloadFile('${u}')">📥</span>
                     </div>
                 `).join('')}</div>`;
             }
@@ -380,13 +402,15 @@
                         </div>
                     </div>
                     <div class="content-wrapper" id="wrapper-${p.id}">
-                        ${isCode ? `<div class="code-block">${escapeHTML(p.message)}</div>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
+                        ${isCode ? `<pre class="language-javascript"><code>${escapeHTML(p.message)}</code></pre>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
                     </div>
                     <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">點擊展開</div>
                     ${attachmentHTML}
                 </div>
             `;
         }).join('');
+        
+        Prism.highlightAll(); // 觸發 Prism 上色
         checkOverflow();
         feed.scrollTop = feed.scrollHeight;
     }
@@ -506,7 +530,7 @@
     function checkOverflow() {
         document.querySelectorAll('.content-wrapper').forEach(wrapper => {
             const hint = wrapper.parentElement.querySelector('.expand-hint');
-            if (wrapper.scrollHeight > 205) {
+            if (wrapper.scrollHeight > 255) {
                 wrapper.classList.add('has-overflow');
                 if (hint) hint.style.display = 'block';
             } else {
