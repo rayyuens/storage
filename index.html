@@ -2,682 +2,793 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RoomiePay Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
-<script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Whatsup PRO">
+
+<title>Whatsup PRO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.min.css">
+<script type="module">
+import PhotoSwipeLightbox from 'https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe-lightbox.esm.min.js';
+const lightbox = new PhotoSwipeLightbox({
+gallery: '#feed',
+children: 'a.pswp-link',
+pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js')
+});
+lightbox.init();
+window.psLightbox = lightbox;
+</script>
 
 <style>
 :root {
---primary: #007AFF; --bg: #F2F2F7; --card: #FFFFFF;
---text: #1C1C1E; --success: #34C759; --danger: #FF3B30; --border: #D1D1D6;
---note-bg: #FFF9C4;
+--primary: #3b82f6; 
+--primary-hover: #2563eb;
+--bg: #f3f4f6;
+--header-bg: rgba(255, 255, 255, 0.85);
+--card-bg: #ffffff;
+--text-main: #111827;
+--text-sub: #6b7280;
+--border: #e5e7eb;
+--input-bg: #ffffff;
+--input-border: #e5e7eb;
+--code-bg: #111827;
+--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+--shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+--radius-lg: 16px;
+--radius-xl: 24px;
+--ai-purple: #8b5cf6;
 }
+
+[data-theme="dark"] {
+--bg: #000000;
+--header-bg: rgba(18, 18, 18, 0.85);
+--card-bg: #121212;
+--text-main: #f3f4f6;
+--text-sub: #9ca3af;
+--border: #27272a;
+--input-bg: #18181b;
+--input-border: #3f3f46;
+--code-bg: #000000;
+--shadow-sm: none;
+--shadow-md: none;
+--shadow-float: 0 0 0 1px #27272a;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease; }
 
 body {
-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-background-color: var(--bg); color: var(--text); margin: 0; padding: 10px;
-padding-bottom: 260px;
+font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+height: 100dvh;
+margin: 0;
+display: flex;
+flex-direction: column;
+background-color: var(--bg);
+color: var(--text-main);
+overflow: hidden;
 }
 
-#loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.login-card { background: white; padding: 20px; border-radius: 16px; text-align: center; width: 280px; }
+.header-section { 
+padding: 12px 20px;
+padding-top: calc(env(safe-area-inset-top) + 12px);
+display: flex; align-items: center; justify-content: space-between;
+background: var(--header-bg); 
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+z-index: 10; 
+border-bottom: 1px solid var(--border);
+position: sticky; top: 0;
+}
+.header-section h1 { 
+font-size: 20px; font-weight: 700; margin: 0; 
+background: linear-gradient(135deg, var(--text-main) 0%, var(--text-sub) 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+cursor: pointer;
+letter-spacing: -0.5px;
+}
+.theme-toggle { 
+font-size: 20px; cursor: pointer; padding: 8px; 
+border-radius: 50%; background: transparent;
+transition: background 0.2s;
+}
+.theme-toggle:hover { background: rgba(128,128,128,0.1); }
 
-#mainContent { display: none; }
-.cloud-status { font-size: 10px; text-align: center; color: #888; margin-bottom: 8px; }
+.feed-container { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
 
-.card { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-.card-title { font-size: 10px; font-weight: 800; color: #8E8E93; text-transform: uppercase; margin-bottom: 8px; display: block; }
+.item-row { 
+background: var(--card-bg); border-radius: var(--radius-lg); padding: 20px; 
+margin-bottom: 24px; max-width: 768px; margin-left: auto; margin-right: auto;
+box-shadow: var(--shadow-sm);
+border: 1px solid var(--border);
+position: relative;
+}
 
-.month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--card); padding: 8px 12px; border-radius: 12px; }
-.month-label { font-weight: 700; font-size: 16px; }
-.nav-btn { background: #E5E5EA; border: none; border-radius: 50%; width: 30px; height: 30px; }
+.item-header {
+display: flex; justify-content: space-between; align-items: center;
+font-size: 12px; color: var(--text-sub); margin-bottom: 12px;
+font-weight: 500;
+}
+.item-time { display: flex; align-items: center; gap: 6px; }
+.item-time::before { content:''; width: 6px; height: 6px; background: var(--border); border-radius: 50%; }
 
-.total-banner { background: var(--primary); color: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-.total-val { font-size: 20px; font-weight: 800; }
+.action-row { display: flex; gap: 6px; align-items: center; }
+.action-btn { 
+cursor: pointer; font-size: 11px; padding: 4px 10px; border-radius: 20px; 
+font-weight: 600; transition: all 0.2s; 
+}
+.ai-btn { background: rgba(139, 92, 246, 0.1); color: var(--ai-purple); border: 1px solid rgba(139, 92, 246, 0.2); }
+.ai-btn:hover { background: var(--ai-purple); color: white; }
+.copy-btn { background: rgba(59, 130, 246, 0.1); color: var(--primary); }
+.copy-btn:hover { background: var(--primary); color: white; }
+.del-btn { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.del-btn:hover { background: #ef4444; color: white; }
 
-input { padding: 8px; border-radius: 8px; border: 1.5px solid #E5E5EA; font-size: 14px; width: 100%; box-sizing: border-box; outline: none; }
-.label-sm { font-size: 9px; color: #666; font-weight: 700; margin: 8px 0 4px 0; display: block; }
+.content-wrapper {
+position: relative;
+font-size: 15px; line-height: 1.6;
+max-height: 300px; 
+overflow: hidden;
+transition: max-height 0.4s cubic-bezier(0, 0, 0.2, 1);
+}
+.content-wrapper.expanded { max-height: none; }
+.content-wrapper.has-overflow:not(.expanded)::after {
+content: "";
+position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+background: linear-gradient(transparent, var(--card-bg));
+pointer-events: none;
+}
 
-.split-selector { display: flex; gap: 5px; margin-bottom: 5px; }
-.split-pill { flex: 1; background: #fff; padding: 6px 2px; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid var(--border); transition: all 0.2s ease; }
-.split-pill input[type="checkbox"] { width: 13px; height: 13px; margin: 0; }
-.payer-pill { background: #F0F9FF; border-color: #007AFF; color: #007AFF; }
+pre[class*="language-"] {
+margin: 12px 0 !important;
+border-radius: 12px !important;
+font-size: 13px !important;
+border: 1px solid var(--border) !important;
+background: var(--code-bg) !important;
+box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
 
-.pill-paid { background: var(--success) !important; border-color: var(--success) !important; color: white !important; }
-.pill-locked { opacity: 0.8; } 
+.expand-hint {
+text-align: center; color: var(--text-sub); font-size: 12px;
+font-weight: 500; margin-top: 12px; display: none; cursor: pointer; padding: 6px 0;
+background: rgba(0,0,0,0.03); border-radius: 8px;
+transition: background 0.2s;
+}
+.expand-hint:hover { background: rgba(0,0,0,0.06); color: var(--text-main); }
 
-.btn-add { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 700; width: 100%; margin-top: 8px; font-size: 13px; }
-.btn-template-toggle { background: #E5E5EA; color: #3A3A3C; border: none; padding: 6px 12px; font-size: 11px; border-radius: 20px; font-weight: 600; margin: 0 auto 10px; display: block; }
+.attachment-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+gap: 12px; margin-top: 16px;
+}
+.post-img-container {
+position: relative; border-radius: 12px; overflow: hidden;
+aspect-ratio: 1; border: 1px solid var(--border);
+transition: transform 0.2s;
+}
+.post-img-container:hover { transform: scale(1.02); }
+.post-img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
 
-.note-item { background: var(--note-bg); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; border-left: 4px solid #FFD600; }
-.note-text { font-weight: 500; color: #444; }
+.file-attachment {
+display: flex; align-items: center; gap: 12px;
+padding: 12px 16px; background: var(--bg); border-radius: 12px; 
+font-size: 13px; border: 1px solid var(--border); margin-top: 10px; 
+color: var(--text-main); transition: 0.2s;
+text-decoration: none;
+}
+.file-attachment:hover { border-color: var(--primary); transform: translateY(-1px); }
+.file-icon { font-size: 20px; }
+.dl-btn-round { 
+cursor: pointer; width: 32px; height: 32px; 
+display: flex; align-items: center; justify-content: center;
+background: rgba(255,255,255,0.9); border-radius: 50%; 
+position: absolute; bottom: 8px; right: 8px;
+box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+color: #333; transition: 0.2s;
+border: none;
+}
+.dl-btn-round:hover { transform: scale(1.1); }
 
-.item-row { border-bottom: 1px solid #F2F2F7; padding: 10px 0; }
-.item-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; }
-.item-desc { font-size: 10px; color: #8E8E93; font-weight: 400; margin-top: 2px; }
-.payer-info { font-weight: 400; color: #8E8E93; font-size: 11px; margin-left: 4px; }
-.delete-btn { background: #FF3B3015; color: var(--danger); border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; }
+.wa-footer {
+padding: 12px 20px;
+padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+background: transparent;
+pointer-events: none;
+z-index: 100;
+}
 
-.summary-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.96); backdrop-filter: blur(15px); padding: 12px; border-top: 1px solid #D1D1D6; z-index: 1000; }
-.summary-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
-.user-summary-card { min-width: 140px; flex-shrink: 0; background: white; padding: 10px; border-radius: 12px; border: 1px solid #E5E5EA; cursor: pointer; }
-.user-name-tag { font-size: 10px; font-weight: 900; color: var(--primary); text-transform: uppercase; border-bottom: 1px solid #F2F2F7; margin-bottom: 5px; }
-.grand-total-tag { font-weight: 800; font-size: 12px; margin-top: 5px; border-top: 1px dashed #E5E5EA; padding-top: 5px; }
+.input-wrapper {
+pointer-events: auto;
+background: var(--input-bg); border-radius: var(--radius-xl); 
+padding: 8px;
+max-width: 768px; margin: 0 auto;
+box-shadow: var(--shadow-float);
+border: 1px solid var(--input-border);
+transition: border-color 0.2s, transform 0.2s;
+}
 
-.modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:10001; width:85%; max-width:320px; max-height: 80vh; overflow-y: auto; }
-#modalOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; }
-.detail-row { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 0; border-bottom: 1px solid #F2F2F7; }
-.detail-paid { color: #aaa; text-decoration: line-through; }
-.custom-val-input { font-size: 11px; padding: 6px; text-align: center; }
-.toggle-container { display: flex; align-items: center; gap: 5px; margin: 10px 0; font-size: 11px; font-weight: 600; color: #666; }
-.toggle-container input { width: auto; }
+.input-wrapper.drag-over {
+border-color: var(--primary);
+transform: scale(1.02);
+box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.wa-input-row { display: flex; align-items: flex-end; gap: 10px; padding: 4px; }
+
+textarea {
+flex: 1; border: none; outline: none; font-size: 16px;
+padding: 12px 4px; max-height: 140px; resize: none;
+background: transparent; line-height: 1.5; color: var(--text-main);
+min-height: 44px;
+font-family: inherit;
+}
+textarea::placeholder { color: var(--text-sub); opacity: 0.7; }
+
+.icon-btn { 
+background: transparent; border: none; width: 44px; height: 44px;
+border-radius: 50%; display: flex; align-items: center; justify-content: center;
+cursor: pointer; font-size: 24px; color: var(--text-sub);
+transition: 0.2s;
+}
+.icon-btn:hover { background: var(--bg); color: var(--primary); }
+
+.send-btn { 
+background: var(--primary); color: white; 
+width: 44px; height: 44px; border-radius: 14px;
+margin-left: 4px;
+}
+.send-btn:hover { background: var(--primary-hover); color: white; transform: scale(1.05); }
+.send-btn:disabled { background: var(--text-sub); opacity: 0.5; transform: none; }
+
+#progressBox {
+display: none; height: 3px; background: var(--bg); 
+border-radius: 2px; margin: 0 16px 8px; overflow: hidden;
+}
+#progressBar {
+width: 0%; height: 100%; background: var(--primary);
+border-radius: 2px;
+transition: width 0.3s ease;
+}
+
+#previewContainer { 
+display: none; padding: 12px 16px 4px; gap: 10px; 
+overflow-x: auto; white-space: nowrap; 
+border-bottom: 1px solid var(--border);
+margin-bottom: 4px;
+}
+#previewContainer::-webkit-scrollbar { display: none; }
+
+.preview-item { position: relative; display: inline-block; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.remove-preview {
+position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6);
+color: white; border: none; border-radius: 50%; width: 20px; height: 20px;
+font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+backdrop-filter: blur(2px);
+}
+
+#qualitySelector { display: none; font-size: 11px; gap: 8px; padding: 0 16px 12px; align-items: center; }
+.q-chip { 
+cursor: pointer; color: var(--text-sub); padding: 4px 12px; border-radius: 20px; 
+background: var(--bg); transition: 0.2s; border: 1px solid transparent;
+font-weight: 500;
+}
+.q-chip:hover { border-color: var(--border); }
+.q-chip.active { background: rgba(59, 130, 246, 0.1); color: var(--primary); border-color: rgba(59, 130, 246, 0.2); }
+
+.toast {
+position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%) scale(0.9);
+background: rgba(17, 24, 39, 0.9); backdrop-filter: blur(4px);
+color: white; padding: 10px 24px; border-radius: 30px;
+font-size: 14px; font-weight: 500; z-index: 10000; display: none;
+box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes popUp { to { transform: translateX(-50%) scale(1); } }
+
+.update-banner {
+position: fixed; top: 0; left: 0; right: 0;
+background: var(--primary); color: white;
+padding: 12px; text-align: center; font-size: 14px;
+z-index: 10000; display: none; cursor: pointer;
+box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+animation: slideDown 0.4s ease;
+font-weight: 600;
+}
+@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+.spinner { animation: rotate 2s linear infinite; width: 20px; height: 20px; }
+.spinner .path { stroke: white; stroke-linecap: round; animation: dash 1.5s ease-in-out infinite; }
+@keyframes rotate { 100% { transform: rotate(360deg); } }
+@keyframes dash {
+0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* AI Container Styles */
+.ai-container {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--text-main);
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+.ai-header {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; color: var(--ai-purple);
+    margin-bottom: 10px; border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+    padding-bottom: 8px;
+}
+.close-ai { margin-left: auto; cursor: pointer; opacity: 0.6; padding: 4px; }
+.close-ai:hover { opacity: 1; }
+.ai-content { line-height: 1.6; white-space: pre-wrap; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
 
-<div id="loginOverlay">
-<div class="login-card">
-<h2>RoomiePay</h2>
-<input type="password" id="passInput" placeholder="Password" style="text-align: center;">
-<button onclick="checkPassword()" class="btn-add">Unlock</button>
+<div id="updateBanner" class="update-banner" onclick="applyUpdate()">
+🚀 New version available! Click here to update.
+</div>
+
+<div id="toast" class="toast">Copied to clipboard</div>
+
+<div class="header-section">
+<div style="display: flex; align-items: center; gap: 12px;">
+<h1 onclick="toggleTheme()">Whatsup</h1>
+<div style="font-size: 11px; background:linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; font-weight: 700; padding: 2px 6px; border-radius: 6px;">PRO</div>
+</div>
+<div class="theme-toggle" onclick="toggleTheme()" id="themeIcon">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
 </div>
 </div>
 
-<div id="modalOverlay" onclick="closeAllModals()"></div>
+<div class="feed-container" id="feed"></div>
 
-<div id="settlementModal" class="modal">
-<h3 style="margin-top:0; font-size:16px; text-align: center;">Final Settlement</h3>
-<div id="settlementResults" style="font-size:14px; line-height:1.6; color:#333; margin:15px 0;"></div>
-<button onclick="closeAllModals()" class="btn-add" style="margin:0; padding:8px;">Got it</button>
-</div>
+<div class="wa-footer">
+<div class="input-wrapper" id="dropZone">
+<div id="previewContainer"></div>
+<div id="progressBox"><div id="progressBar"></div></div>
 
-<div id="detailModal" class="modal">
-<h3 id="detailUserName" style="margin-top:0; font-size:16px; text-align: center; color: var(--primary);">User Details</h3>
-<div id="detailContent" style="font-size:13px;"></div>
-<button onclick="closeAllModals()" class="btn-add" style="margin-top:15px; padding:8px;">Close</button>
+<div class="wa-input-row">
+<label for="photo" class="icon-btn">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+</label>
+<input type="file" id="photo" style="display:none" multiple>
+<textarea id="msg" rows="1" placeholder="Type a message, code, or drop files..." oninput="autoResize(this)"></textarea>
+<button id="uploadBtn" class="send-btn">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; margin-left:-2px"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+</button>
 </div>
-
-<div id="mainContent">
-<div class="cloud-status" id="cloudStatus">Connecting...</div>
-
-<div class="month-nav">
-<button class="nav-btn" onclick="changeMonth(-1)">❮</button>
-<div id="monthDisplay" class="month-label">Month</div>
-<button class="nav-btn" onclick="changeMonth(1)">❯</button>
+<div id="qualitySelector">
+<span style="color:var(--text-sub); margin-right:4px;">Image Mode:</span>
+<span id="modeCompress" class="q-chip active" onclick="setMode('compress')">Smart Compress</span>
+<span id="modeRaw" class="q-chip" onclick="setMode('raw')">Original</span>
 </div>
-
-<div class="card" style="border: 1px solid #FFD600;">
-<span class="card-title">📝 Shopping Notes</span>
-<div id="notesContainer" style="margin-bottom: 10px;"></div>
-<div style="display: flex; gap: 5px;">
-<input type="text" id="noteInput" placeholder="What do we need?">
-<button onclick="addNote()" class="btn-add" style="margin:0; width:70px; background:#FFD600; color:#000;">Add</button>
-</div>
-</div>
-
-<div class="total-banner">
-<span style="font-size: 12px; font-weight: 600;">Total Expense</span>
-<span class="total-val" id="monthlyTotalDisplay">$0.00</span>
-</div>
-
-<button class="btn-template-toggle" onclick="toggleTemplateView()">⚙️ Settings & Templates</button>
-
-<div id="templateSection" class="card" style="display:none; border: 1px dashed #007AFF;">
-<span class="card-title">0. Manage Users</span>
-<div id="userManagementList" style="margin-bottom: 10px;"></div>
-<div style="display:flex; gap:5px; margin-bottom:15px;">
-<input type="text" id="newUserName" placeholder="New User Name">
-<button onclick="addNewUser()" class="btn-add" style="margin:0; width:80px; font-size:11px;">Add</button>
-</div>
-<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-
-<span class="card-title">1. Custom Quick Tags</span>
-<div id="customTagsList" style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;"></div>
-<div style="display:flex; gap:5px; margin-bottom:15px;">
-<input type="text" id="newTagName" placeholder="New tag">
-<button onclick="addCustomTag()" class="btn-add" style="margin:0; width:80px; font-size:11px;">Add</button>
-</div>
-
-<span class="card-title">2. Manage Templates</span>
-<div id="templateList" style="margin-bottom: 10px;"></div>
-<div style="display:flex; gap:5px; margin-bottom:5px;">
-<input type="text" id="tempName" placeholder="Name">
-<input type="number" id="tempAmount" placeholder="$" style="width:35%">
-</div>
-<input type="text" id="tempNote" placeholder="Notes" style="margin-bottom: 8px; font-size: 12px;">
-<span class="label-sm">Who usually pays?</span>
-<div class="split-selector" id="tempPayerSelector"></div>
-<div class="toggle-container">
-<input type="checkbox" id="tempCustomSplitToggle" onchange="toggleTempCustomInputs()"> 
-<label for="tempCustomSplitToggle">Use Custom Split Amounts ($)</label>
-</div>
-<span class="label-sm">Split between:</span>
-<div class="split-selector" id="tempSplitSelector"></div>
-<div id="tempCustomAmountsContainer" style="display:none; gap:5px; margin-bottom:10px;"></div>
-<div style="display:flex; gap:8px;">
-<button onclick="addTemplateItem()" class="btn-add" style="background:#8E8E93;">Save Template</button>
-<button onclick="applyTemplates()" class="btn-add" style="background:var(--success);">Apply All Now</button>
-</div>
-</div>
-
-<div class="card">
-<span class="card-title">Add Expense</span>
-<div id="quickTagsContainer" style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap;"></div>
-<div style="display: flex; gap: 8px; margin-bottom: 8px;">
-<input type="text" id="itemName" placeholder="Item Name">
-<input type="number" id="itemAmount" placeholder="$" style="width: 35%;">
-</div>
-<input type="text" id="itemNote" placeholder="Notes" style="margin-bottom: 8px; font-size: 12px;">
-<span class="label-sm">Who Paid?</span>
-<div class="split-selector" id="payerSelector"></div>
-<div class="toggle-container">
-<input type="checkbox" id="customSplitToggle" onchange="toggleCustomInputs()"> 
-<label for="customSplitToggle">Use Custom Split Amounts ($)</label>
-</div>
-<span class="label-sm">Split Between:</span>
-<div class="split-selector" id="splitSelector"></div>
-<div id="customAmountsContainer" style="display:none; gap:5px; margin-bottom:10px;"></div>
-<button onclick="addItem()" class="btn-add">Add to List</button>
-</div>
-
-<div class="card">
-<span class="card-title">Checklist</span>
-<div id="listContainer"></div>
-<button onclick="clearAllExpenses()" class="btn-add" style="background:none; color:var(--danger); border:1px solid var(--danger); font-size:11px; margin-top:15px; padding:6px;">🗑 Clear Month</button>
-</div>
-
-<div class="summary-panel">
-<div class="summary-scroll" id="summaryGrid"></div>
-<button onclick="calculateSettlement()" style="width:100%; background:var(--primary); color:white; border:none; border-radius:8px; padding:8px; font-size:11px; font-weight:700; margin-top:10px;">📊 Calculate Transfer Path</button>
 </div>
 </div>
 
 <script>
-// 🔥🔥🔥 PLEASE REPLACE WITH YOUR ACTUAL SUPABASE URL 🔥🔥🔥
-const SUPABASE_FUNCTION_URL = "INSERT_YOUR_SUPABASE_URL_HERE"; 
+const APP_VERSION = '4.3'; 
+const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
+const db = supabase.createClient(SB_URL, SB_KEY);
 
-const APP_PASSWORD = "  "; 
-let viewDate = new Date(); viewDate.setDate(1);
-let roommateNames = ["Ray", "Roy", "Irene"];
-let templates = [];
-let quickTags = ["🏠 Rent", "🛒 Grocery", "⛽ Gas", "💳 Credit"];
-let allExpenses = {};
-let shoppingNotes = []; 
-let db;
+function initTheme() {
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+document.documentElement.setAttribute('data-theme', 'dark');
+updateThemeIcon('dark');
+} else {
+updateThemeIcon('light');
+}
+}
+function toggleTheme() {
+const target = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+document.documentElement.setAttribute('data-theme', target);
+localStorage.setItem('theme', target);
+updateThemeIcon(target);
+}
+function updateThemeIcon(theme) {
+const icon = document.getElementById('themeIcon');
+if (theme === 'dark') {
+icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+} else {
+icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+}
+}
+initTheme();
 
-window.fillItem = (name, targetId = 'itemName') => {
-    document.getElementById(targetId).value = name;
-    if(targetId === 'itemName') document.getElementById('itemAmount').focus();
-};
+let uploadMode = 'compress';
+let selectedFiles = [];
 
-function checkPassword() {
-    if (document.getElementById('passInput').value === APP_PASSWORD) {
-        sessionStorage.setItem('roomiePay_auth', 'true');
-        unlockApp();
-    } else { alert("Incorrect"); }
+const msgInput = document.getElementById('msg');
+const photoInput = document.getElementById('photo');
+const feed = document.getElementById('feed');
+const uploadBtn = document.getElementById('uploadBtn');
+const previewContainer = document.getElementById('previewContainer');
+const dropZone = document.getElementById('dropZone');
+const progressBox = document.getElementById('progressBox');
+const progressBar = document.getElementById('progressBar');
+
+const SPINNER_HTML = `<svg class="spinner" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle></svg>`;
+const SEND_ICON_HTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; margin-left:-2px"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+
+function autoResize(textarea) {
+textarea.style.height = 'auto';
+textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 }
 
-function unlockApp() {
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
-    initApp();
-}
-
-window.onload = () => { if (sessionStorage.getItem('roomiePay_auth') === 'true') unlockApp(); };
-
-function initApp() {
-    const config = {
-        apiKey: "AIzaSyDtpJleIfumVt_yS0F3JDGMyrm0disdtp4",
-        authDomain: "roomiepay-76a38.firebaseapp.com",
-        databaseURL: "https://roomiepay-76a38-default-rtdb.firebaseio.com",
-        projectId: "roomiepay-76a38"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(config);
-    db = firebase.database();
-    db.ref('roomiePay_v11').on('value', (snap) => {
-        const data = snap.val();
-        if (data) {
-            roommateNames = data.names || ["Ray", "Roy", "Irene"];
-            templates = data.templates || [];
-            quickTags = data.quickTags || ["🏠 Rent", "🛒 Grocery", "⛽ Gas", "💳 Credit"];
-            allExpenses = data.expenses || {};
-            shoppingNotes = data.notes || []; 
-        }
-        render();
-        document.getElementById('cloudStatus').innerText = "● Cloud Synced";
-    });
-}
-
-window.pushToCloud = () => db.ref('roomiePay_v11').set({ 
-    names: roommateNames, templates, quickTags, expenses: allExpenses, notes: shoppingNotes 
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+e.preventDefault();
+dropZone.classList.remove('drag-over');
+const files = Array.from(e.dataTransfer.files);
+if (files.length > 0) { selectedFiles = [...selectedFiles, ...files]; renderPreviews(); }
 });
 
-// --- UPDATED USER MANAGEMENT (Soft Delete Logic) ---
-window.addNewUser = () => {
-    const val = document.getElementById('newUserName').value.trim();
-    if(val) {
-        if(!roommateNames.includes(val)) {
-            roommateNames.push(val);
-            document.getElementById('newUserName').value = '';
-            pushToCloud();
-        } else { alert("User already exists!"); }
-    }
-};
+msgInput.addEventListener('keydown', (e) => {
+if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
 
-window.updateUser = (idx, newName) => {
-    if(newName && newName.trim() !== "") {
-        roommateNames[idx] = newName.trim();
-        pushToCloud();
-    }
-};
-
-window.removeUser = (idx) => {
-    if(confirm("Confirm to remove? User will be hidden from new bills, but history remains safely.")) {
-        roommateNames[idx] = "[Deleted] " + roommateNames[idx];
-        pushToCloud();
-    }
-};
-// ---------------------------------------------------
-
-window.toggleCustomInputs = () => {
-    document.getElementById('customAmountsContainer').style.display = document.getElementById('customSplitToggle').checked ? 'flex' : 'none';
-};
-
-window.toggleTempCustomInputs = () => {
-    document.getElementById('tempCustomAmountsContainer').style.display = document.getElementById('tempCustomSplitToggle').checked ? 'flex' : 'none';
-};
-
-window.addNote = () => {
-    const input = document.getElementById('noteInput');
-    if(input.value.trim()) {
-        shoppingNotes.push({ id: Date.now(), text: input.value.trim() });
-        input.value = ''; pushToCloud();
-    }
-};
-
-window.deleteNote = (id) => { shoppingNotes = shoppingNotes.filter(n => n.id !== id); pushToCloud(); };
-window.addCustomTag = () => {
-    const val = document.getElementById('newTagName').value.trim();
-    if(val) { quickTags.push(val); document.getElementById('newTagName').value = ''; pushToCloud(); }
-};
-window.removeTag = (idx) => { quickTags.splice(idx, 1); pushToCloud(); };
-
-window.addItem = () => {
-    const name = document.getElementById('itemName').value;
-    const amount = parseFloat(document.getElementById('itemAmount').value);
-    const note = document.getElementById('itemNote').value.trim();
-    
-    const visiblePayers = Array.from(document.querySelectorAll('.payer-check'));
-    const visibleSplits = Array.from(document.querySelectorAll('.split-check'));
-    
-    let payers = new Array(roommateNames.length).fill(false);
-    let participants = new Array(roommateNames.length).fill(false);
-    
-    visiblePayers.forEach(el => {
-        if(el.checked) payers[parseInt(el.dataset.idx)] = true;
-    });
-    visibleSplits.forEach(el => {
-        if(el.checked) participants[parseInt(el.dataset.idx)] = true;
-    });
-
-    const isCustom = document.getElementById('customSplitToggle').checked;
-    let customAmounts = null;
-    
-    if(isCustom) {
-        customAmounts = new Array(roommateNames.length).fill(0);
-        const visibleInputs = Array.from(document.querySelectorAll('#customAmountsContainer .custom-val-input'));
-        visibleInputs.forEach(el => {
-            let val = parseFloat(el.value) || 0;
-            customAmounts[parseInt(el.dataset.idx)] = val;
-        });
-        
-        if (Math.abs(customAmounts.reduce((a,b)=>a+b,0) - amount) > 0.01) {
-            alert("Custom sum must match total amount"); return;
-        }
-    }
-
-    if (name && !isNaN(amount)) {
-        const key = getMonthKey();
-        if (!allExpenses[key]) allExpenses[key] = [];
-        allExpenses[key].push({ 
-            id: Date.now(), name, amount, note, payers, splitBetween: participants, 
-            paidBy: participants.map((p, i) => p && payers[i]), customAmounts 
-        });
-        ['itemName','itemAmount','itemNote'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('customSplitToggle').checked = false;
-        toggleCustomInputs();
-        pushToCloud();
-    }
-};
-
-window.addTemplateItem = () => {
-    const name = document.getElementById('tempName').value;
-    const amount = parseFloat(document.getElementById('tempAmount').value);
-    const note = document.getElementById('tempNote').value.trim();
-    
-    let payers = new Array(roommateNames.length).fill(false);
-    let splits = new Array(roommateNames.length).fill(false);
-    
-    Array.from(document.querySelectorAll('.temp-payer-check')).forEach(el => {
-        if(el.checked) payers[parseInt(el.dataset.idx)] = true;
-    });
-    Array.from(document.querySelectorAll('.temp-split-check')).forEach(el => {
-        if(el.checked) splits[parseInt(el.dataset.idx)] = true;
-    });
-
-    const isCustom = document.getElementById('tempCustomSplitToggle').checked;
-    let customAmounts = null;
-    if(isCustom) {
-        customAmounts = new Array(roommateNames.length).fill(0);
-        Array.from(document.querySelectorAll('#tempCustomAmountsContainer .custom-val-input')).forEach(el => {
-            customAmounts[parseInt(el.dataset.idx)] = parseFloat(el.value) || 0;
-        });
-    }
-
-    if(name && !isNaN(amount)) {
-        templates.push({ name, amount, note, payers, splitBetween: splits, customAmounts });
-        ['tempName','tempAmount','tempNote'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('tempCustomSplitToggle').checked = false;
-        toggleTempCustomInputs();
-        pushToCloud();
-    }
-};
-
-window.applyTemplates = () => {
-    const key = getMonthKey();
-    if (!allExpenses[key]) allExpenses[key] = [];
-    templates.forEach(t => {
-        allExpenses[key].push({ 
-            ...t, id: Date.now() + Math.random(), 
-            paidBy: t.splitBetween.map((p, i) => p && t.payers[i]) 
-        });
-    });
-    pushToCloud();
-    document.getElementById('templateSection').style.display = 'none';
-};
-
-window.clearAllExpenses = () => { if (confirm("Clear all?")) { allExpenses[getMonthKey()] = []; pushToCloud(); } };
-window.deleteItem = (id) => { allExpenses[getMonthKey()] = allExpenses[getMonthKey()].filter(e => e.id !== id); pushToCloud(); };
-window.togglePaid = (id, idx) => {
-    const item = allExpenses[getMonthKey()].find(e => e.id === id);
-    if (item && !item.payers[idx]) { item.paidBy[idx] = !item.paidBy[idx]; pushToCloud(); }
-};
-
-window.toggleTemplateView = () => { const s = document.getElementById('templateSection'); s.style.display = (s.style.display==='block'?'none':'block'); };
-window.changeMonth = (offset) => { viewDate.setMonth(viewDate.getMonth() + offset); render(); };
-function getMonthKey() { return viewDate.getFullYear() + "-" + (viewDate.getMonth() + 1).toString().padStart(2, '0'); }
-
-window.openDetails = (idx) => {
-    const key = getMonthKey();
-    const items = allExpenses[key] || [];
-    const name = roommateNames[idx];
-
-    let html = `<b>Items ${name} Paid Upfront:</b><br>`;
-    let upfrontItems = items.filter(item => item.payers[idx]);
-    if(upfrontItems.length === 0) html += `<span style="color:gray">None</span><br>`;
-    else upfrontItems.forEach(i => {
-        const count = i.payers.filter(Boolean).length;
-        html += `• ${i.name}: $${(i.amount/count).toFixed(2)}<br>`;
-    });
-
-    html += `<br><b>Items ${name} Owes for:</b><br>`;
-    items.forEach(item => {
-        let share = item.customAmounts ? item.customAmounts[idx] : (item.splitBetween[idx] ? item.amount / item.splitBetween.filter(Boolean).length : 0);
-        if (share > 0) {
-            const status = item.paidBy[idx] ? '✅' : '❌';
-            html += `<div style="display:flex; justify-content:space-between; ${item.paidBy[idx]?'color:#aaa; text-decoration:line-through':''}">
-            <span>${status} ${item.name}</span> <span>$${share.toFixed(2)}</span>
-            </div>`;
-        }
-    });
-
-    document.getElementById('detailUserName').innerText = name + "'s Monthly Detail";
-    document.getElementById('detailContent').innerHTML = html;
-    document.getElementById('modalOverlay').style.display = 'block';
-    document.getElementById('detailModal').style.display = 'block';
-};
-
-// --- MODIFIED SETTLEMENT WITH AI EXPLAIN ---
-window.calculateSettlement = () => {
-    const items = allExpenses[getMonthKey()] || [];
-    let balances = roommateNames.map(() => 0);
-    
-    // 1. Calculate Balances
-    items.forEach(item => {
-        const payersCount = item.payers.filter(Boolean).length;
-        if (payersCount === 0) return;
-        roommateNames.forEach((_, i) => {
-            let share = item.customAmounts ? item.customAmounts[i] : (item.splitBetween[i] ? item.amount / item.splitBetween.filter(Boolean).length : 0);
-            if (share > 0 && !item.paidBy[i]) {
-                balances[i] -= share;
-                item.payers.forEach((isPayer, pIdx) => { if (isPayer) balances[pIdx] += (share / payersCount); });
-            }
-        });
-    });
-    
-    // 2. Prepare Data for AI (Raw Context)
-    let rawStatus = [];
-    let debtors = [], creditors = [], results = [];
-    
-    balances.forEach((bal, i) => {
-        if(Math.abs(bal) < 0.01 && roommateNames[i].startsWith('[Deleted]')) return;
-        
-        // Save description for AI
-        if (Math.abs(bal) > 0.01) {
-            let n = roommateNames[i].replace('[Deleted]', '🚫');
-            rawStatus.push(`${n} ${bal > 0 ? 'claims' : 'owes'} $${Math.abs(bal).toFixed(2)}`);
-        }
-
-        if (bal < -0.01) debtors.push({ name: roommateNames[i], amt: -bal });
-        else if (bal > 0.01) creditors.push({ name: roommateNames[i], amt: bal });
-    });
-    
-    // 3. Simplify Debt
-    let d = 0, c = 0;
-    while (d < debtors.length && c < creditors.length) {
-        let settleAmt = Math.min(debtors[d].amt, creditors[c].amt);
-        let dName = debtors[d].name.replace('[Deleted]', '🚫');
-        let cName = creditors[c].name.replace('[Deleted]', '🚫');
-        
-        results.push(`<b>${dName}</b> → $${settleAmt.toFixed(2)} → <b>${cName}</b>`);
-        
-        debtors[d].amt -= settleAmt; creditors[c].amt -= settleAmt;
-        if (debtors[d].amt < 0.01) d++; if (creditors[c].amt < 0.01) c++;
-    }
-    
-    // 4. Render Results + AI Button
-    const resultHtml = results.length > 0 ? results.join('<br>') : "All items settled! 🎉";
-    const promptForAI = `Scenario: Net balances are [${rawStatus.join(', ')}]. The calculated settlement path is: [${results.map(r => r.replace(/<[^>]*>/g, '')).join('; ')}]. Explain in Cantonese logic: 1. Who actually paid upfront vs who consumed. 2. Why this simplified path works.`;
-
-    document.getElementById('settlementResults').innerHTML = `
-        <div style="margin-bottom:15px;">${resultHtml}</div>
-        <hr style="border:0; border-top:1px solid #eee;">
-        <div id="aiResponseBox" style="font-size:12px; color:#555; background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:10px; display:none;"></div>
-        <button id="btnAskAI" onclick='askAI(\`${promptForAI.replace(/'/g, "\\'")}\`)' class="btn-add" style="background:#8E8E93; margin-bottom:5px;">🤖 AI Explain (廣東話)</button>
-    `;
-
-    document.getElementById('modalOverlay').style.display = 'block';
-    document.getElementById('settlementModal').style.display = 'block';
-};
-
-// --- 修改後的 AI 呼叫部分 ---
-window.askAI = async (promptText) => {
-    const btn = document.getElementById('btnAskAI');
-    const box = document.getElementById('aiResponseBox');
-    
-    // 你提供嘅 Supabase 設定
-    const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
-    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
-    
-    // 拼湊出 Edge Function 嘅完整路徑 (假設你個 function 叫 'gemini-explain')
-    // ⚠️ 請確保 'gemini-explain' 係你真正的 Function 名稱
-    const FUNCTION_NAME = 'gemini-explain'; 
-    const FULL_URL = `${SB_URL}/functions/v1/${FUNCTION_NAME}`;
-
-    btn.disabled = true;
-    btn.innerText = "Thinking... (等陣)";
-    box.style.display = 'block';
-    box.innerHTML = "<i>AI 正在分析賬單邏輯...</i>";
-
-    try {
-        const response = await fetch(FULL_URL, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SB_KEY}`, // 加入 Auth Key
-                'apikey': SB_KEY                    // Supabase 必備
-            },
-            body: JSON.stringify({ text: promptText })
-        });
-
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || "Network error");
-        }
-        
-        const data = await response.json();
-        
-        // 簡單 Markdown 轉 HTML (將 ** 變 <b>)
-        let formattedText = data.explanation.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-        box.innerHTML = `<strong style="color:var(--primary)">🤖 AI Analysis:</strong><br><br>${formattedText}`;
-        btn.style.display = 'none';
-
-    } catch (error) {
-        console.error("AI Error:", error);
-        box.innerHTML = `<span style="color:red">Error: ${error.message}</span>`;
-        btn.innerText = "Retry";
-        btn.disabled = false;
-    }
-};
-
-    btn.disabled = true;
-    btn.innerText = "Thinking... (等陣)";
-    box.style.display = 'block';
-    box.innerHTML = "<i>AI 正在分析賬單邏輯...</i>";
-
-    try {
-        const response = await fetch(SUPABASE_FUNCTION_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: promptText })
-        });
-
-        if (!response.ok) throw new Error("Network error");
-        const data = await response.json();
-        
-        // Basic Formatting
-        let formattedText = data.explanation.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-        box.innerHTML = `<strong style="color:var(--primary)">🤖 AI Analysis:</strong><br><br>${formattedText}`;
-        btn.style.display = 'none';
-
-    } catch (error) {
-        box.innerHTML = `<span style="color:red">Error: ${error.message}</span>`;
-        btn.innerText = "Retry";
-        btn.disabled = false;
-    }
-};
-
-window.closeAllModals = () => {
-    document.getElementById('modalOverlay').style.display = 'none';
-    document.getElementById('settlementModal').style.display = 'none';
-    document.getElementById('detailModal').style.display = 'none';
-};
-
-function render() {
-    const key = getMonthKey();
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    document.getElementById('monthDisplay').innerText = monthNames[viewDate.getMonth()] + " " + viewDate.getFullYear();
-
-    document.getElementById('notesContainer').innerHTML = shoppingNotes.map(n => `<div class="note-item"><span class="note-text">${n.text}</span><button class="delete-btn" onclick="deleteNote(${n.id})">✕</button></div>`).join('');
-    document.getElementById('quickTagsContainer').innerHTML = '<span class="label-sm" style="margin:0; align-self:center;">Quick:</span>' + 
-    quickTags.map(tag => `<button class="btn-template-toggle" style="margin:0; padding:4px 8px; font-size:10px;" onclick="fillItem('${tag}')">${tag}</button>`).join('');
-    document.getElementById('customTagsList').innerHTML = quickTags.map((tag, i) => `<div class="btn-template-toggle" style="margin:0; padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:5px;"><span onclick="fillItem('${tag}', 'tempName')">${tag}</span><span style="color:red; font-weight:800;" onclick="removeTag(${i})">×</span></div>`).join('');
-
-    // --- RENDER USER MANAGEMENT LIST (Show deleted items but disable edit) ---
-    document.getElementById('userManagementList').innerHTML = roommateNames.map((name, i) => {
-        const isDel = name.startsWith('[Deleted]');
-        return `
-        <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-            <input type="text" value="${name}" onchange="updateUser(${i}, this.value)" style="padding:4px; font-size:12px; ${isDel?'color:red; text-decoration:line-through;':''}" ${isDel?'disabled':''}>
-            ${!isDel ? `<button class="delete-btn" style="width:25px; height:25px;" onclick="removeUser(${i})">✕</button>` : ''}
-        </div>`;
-    }).join('');
-
-    const genCheck = (cls) => roommateNames.map((n, i) => n.startsWith('[Deleted]') ? '' : `<label class="split-pill payer-pill"><input type="checkbox" class="${cls}" data-idx="${i}"> ${n}</label>`).join('');
-    const genSplit = (cls) => roommateNames.map((n, i) => n.startsWith('[Deleted]') ? '' : `<label class="split-pill"><input type="checkbox" class="${cls}" checked data-idx="${i}"> ${n}</label>`).join('');
-    const genInput = () => roommateNames.map((n, i) => n.startsWith('[Deleted]') ? '' : `<input type="number" class="custom-val-input" placeholder="${n} $" data-idx="${i}">`).join('');
-
-    document.getElementById('payerSelector').innerHTML = genCheck('payer-check');
-    document.getElementById('splitSelector').innerHTML = genSplit('split-check');
-    document.getElementById('customAmountsContainer').innerHTML = genInput();
-    
-    document.getElementById('tempPayerSelector').innerHTML = genCheck('temp-payer-check');
-    document.getElementById('tempSplitSelector').innerHTML = genSplit('temp-split-check');
-    document.getElementById('tempCustomAmountsContainer').innerHTML = genInput();
-
-    document.getElementById('templateList').innerHTML = templates.map((t, i) => `<div style="font-size:11px; padding:4px 0; border-bottom:1px solid #eee;">• ${t.name} ($${t.amount})<span style="color:red; float:right;" onclick="templates.splice(${i},1); pushToCloud();">✕</span></div>`).join('');
-
-    const monthItems = allExpenses[key] || [];
-    document.getElementById('monthlyTotalDisplay').innerText = `$${monthItems.reduce((s,i)=>s+i.amount,0).toFixed(2)}`;
-
-    let userStats = roommateNames.map(() => []);
-    let userTotalOwed = roommateNames.map(() => 0);
-    let userTotalPaidUpfront = roommateNames.map(() => 0);
-
-    const container = document.getElementById('listContainer');
-    container.innerHTML = monthItems.length === 0 ? '<p style="text-align:center;font-size:11px;color:gray">No expenses</p>' : '';
-
-    monthItems.forEach(item => {
-        const payersCount = item.payers.filter(Boolean).length;
-        item.payers.forEach((isPayer, idx) => { if (isPayer && userTotalPaidUpfront[idx] !== undefined) userTotalPaidUpfront[idx] += (item.amount / payersCount); });
-
-        roommateNames.forEach((_, idx) => {
-            let share = item.customAmounts ? item.customAmounts[idx] : (item.splitBetween[idx] ? item.amount / item.splitBetween.filter(Boolean).length : 0);
-            if (share > 0) {
-                userStats[idx].push({ name: item.name, amount: share, isPaid: item.paidBy[idx] });
-                if (!item.paidBy[idx]) userTotalOwed[idx] += share;
-            }
-        });
-
-        const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `
-        <div class="item-header"><span>${item.name} ($${item.amount.toFixed(2)}) <span class="payer-info">${roommateNames.filter((_, idx) => item.payers[idx]).join('&')} paid</span></span><button class="delete-btn" onclick="deleteItem(${item.id})">✕</button></div>
-        ${item.note ? `<div class="item-desc">${item.note}</div>` : ''}
-        <div style="display:flex; gap:5px; margin-top:8px;">
-        ${roommateNames.map((name, index) => {
-            const hasShare = item.customAmounts ? item.customAmounts[index] > 0 : item.splitBetween[index];
-            const isDeleted = name.startsWith('[Deleted]');
-            
-            if (!hasShare && isDeleted) return ''; 
-            if (!hasShare) return `<div style="flex:1"></div>`; 
-            
-            return `<label class="split-pill ${item.paidBy[index] ? 'pill-paid' : ''} ${item.payers[index] ? 'pill-locked' : ''}" style="padding:4px 0; font-size:10px;">
-            <input type="checkbox" ${item.paidBy[index] ? 'checked' : ''} ${item.payers[index] ? 'disabled' : ''} onchange="togglePaid(${item.id}, ${index})"> ${name.replace('[Deleted]', '🚫')}
-            </label>`;
-        }).join('')}
-        </div>`;
-        container.appendChild(div);
-    });
-
-    document.getElementById('summaryGrid').innerHTML = roommateNames.map((name, i) => {
-        const isDel = name.startsWith('[Deleted]');
-        const noDebt = userTotalOwed[i] <= 0.01;
-        const noUpfront = userTotalPaidUpfront[i] <= 0.01;
-        
-        if (isDel && noDebt && noUpfront) return '';
-        
-        return `
-        <div class="user-summary-card" onclick="openDetails(${i})" style="${isDel ? 'opacity:0.6; background:#f0f0f0;' : ''}">
-        <div class="user-name-tag">${name.replace('[Deleted]', '🚫')} ℹ️</div>
-        <div style="font-size:9px; color:#666; margin-bottom:6px; background:#F2F2F7; padding:2px 4px; border-radius:4px;">Upfront: $${userTotalPaidUpfront[i] ? userTotalPaidUpfront[i].toFixed(2) : '0.00'}</div>
-        ${userStats[i].map(d => `<div style="font-size:9px; display:flex; justify-content:space-between; ${d.isPaid?'text-decoration:line-through;color:#aaa':''}"><span>${d.name}</span><span>$${d.amount.toFixed(2)}</span></div>`).join('')}
-        <div class="grand-total-tag" style="color: ${userTotalOwed[i] <= 0.01 ? 'var(--success)' : 'var(--danger)'}">${userTotalOwed[i] <= 0.01 ? 'PAID' : 'OWE: $' + userTotalOwed[i].toFixed(2)}</div>
-        </div>`;
-    }).join('');
+function escapeHTML(str) {
+return str ? str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])) : '';
 }
+
+function getFileNameFromUrl(url) {
+try {
+const decodedUrl = decodeURIComponent(url);
+const fullFileName = decodedUrl.split('/').pop();
+return fullFileName.includes('_') ? fullFileName.split('_').slice(1).join('_') : fullFileName;
+} catch(e) { return "Unknown File"; }
+}
+
+async function downloadFile(url, filename) {
+try {
+const res = await fetch(url);
+const blob = await res.blob();
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = filename || getFileNameFromUrl(url);
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(a.href);
+} catch (e) {
+window.open(url, '_blank');
+}
+}
+
+// AI Explain Function (Updated for Multi-modal)
+// AI 解釋功能 (宜家會直接儲存入 Supabase，令每個人都見到)
+// AI Explain Function (Store in Supabase Version)
+async function explainMsg(id) {
+const wrapper = document.getElementById(`wrapper-${id}`);
+    // 搵返撳嗰粒掣，整少少 loading 反饋
+const btn = event.currentTarget;
+const originalText = btn.innerText;
+
+if (!wrapper) return;
+
+const textContent = wrapper.innerText;
+const row = wrapper.closest('.item-row');
+const imgElements = row.querySelectorAll('.post-img');
+const images = Array.from(imgElements).map(img => img.src);
+
+    // 按鈕 Loading 狀態
+btn.innerText = "分析中...";
+btn.style.opacity = "0.5";
+btn.style.pointerEvents = "none";
+
+try {
+const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'Authorization': `Bearer ${SB_KEY}`,
+'apikey': SB_KEY
+},
+body: JSON.stringify({ 
+text: textContent,
+images: images 
+})
+});
+
+const data = await response.json();
+
+if (data.explanation) {
+            // 🔥 重點：將 AI 嘅解釋作為新 Post 插入 Supabase
+            // 咁樣因為你有 Realtime 訂閱，所有人嘅 Feed 都會即時見到呢條 AI Message
+const aiFormattedMessage = `🤖 AI 洞察 (回應訊息 #${id}):\n\n${data.explanation}`;
+
+const { error } = await db.from('posts').insert([
+{ 
+message: aiFormattedMessage, 
+                    url: JSON.stringify([]) // AI 暫時唔加圖片
+                    url: JSON.stringify([]) 
+}
+]);
+
+if (error) throw error;
+showToast("AI 解釋已發佈到大廳！");
+}
+
+} catch (e) {
+console.error(e);
+        alert("AI 出錯咗： " + e.message);
+        showToast("⚠️ AI 出錯：" + e.message);
+} finally {
+        // 還原按鈕
+btn.innerText = originalText;
+btn.style.opacity = "1";
+btn.style.pointerEvents = "auto";
+}
+}
+
+    const textContent = wrapper.innerText;
+
+    // Extract Images from the current item row
+    const row = wrapper.closest('.item-row');
+    const imgElements = row.querySelectorAll('.post-img');
+    const images = Array.from(imgElements).map(img => img.src);
+
+    // Show Loading
+    aiContainer.style.display = 'block';
+    aiContainer.innerHTML = `
+        <div class="ai-header">
+            <svg class="spinner" viewBox="0 0 50 50" style="width:16px;height:16px;border:none;">
+                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" style="stroke:var(--ai-purple)"></circle>
+            </svg>
+            <span>AI is analyzing...</span>
+        </div>`;
+
+    try {
+        const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SB_KEY}`,
+                'apikey': SB_KEY
+            },
+            body: JSON.stringify({ 
+                text: textContent,
+                images: images // Sending images array too
+            })
+        });
+
+        const data = await response.json();
+        
+        // Show result
+        aiContainer.innerHTML = `
+            <div class="ai-header">
+                <span>🤖 AI Insight</span>
+                <span class="close-ai" onclick="document.getElementById('ai-res-${id}').style.display='none'">✕</span>
+            </div>
+            <div class="ai-content">${escapeHTML(data.explanation)}</div>
+        `;
+
+    } catch (e) {
+        console.error(e);
+        aiContainer.innerHTML = `
+            <div class="ai-header" style="color:#ef4444; border-color: rgba(239,68,68,0.2)">
+                <span>Error</span>
+                <span class="close-ai" onclick="document.getElementById('ai-res-${id}').style.display='none'">✕</span>
+            </div>
+            <div style="color:#ef4444; font-size:13px;">${e.message}</div>
+        `;
+    }
+}
+
+function render(data) {
+if (!data) return;
+feed.innerHTML = data.map(p => {
+const time = new Date(p.created_at).toLocaleString([], {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+const isCode = p.message && (p.message.includes('=>') || p.message.includes('{') || p.message.includes('const ') || p.message.includes('import ') || p.message.includes('<div'));
+const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
+
+let urls = [];
+if (p.url) { try { urls = JSON.parse(p.url); } catch(e) { urls = p.url.split(','); } }
+if (!Array.isArray(urls)) urls = [urls];
+
+const imgs = urls.filter(u => u.match(/\.(jpg|jpeg|png|gif|webp)/i));
+const files = urls.filter(u => !u.match(/\.(jpg|jpeg|png|gif|webp)/i));
+
+let attachmentHTML = '';
+if (imgs.length > 0) {
+attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `
+                  <div class="post-img-container">
+                      <a href="${u}" class="pswp-link" data-pswp-width="1200" data-pswp-height="1200" target="_blank">
+                          <img src="${u}" class="post-img" loading="lazy">
+                      </a>
+                      <button class="dl-btn-round" onclick="downloadFile('${u}')" title="Download Image">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                      </button>
+                  </div>
+              `).join('')}</div>`;
+}
+if (files.length > 0) {
+attachmentHTML += files.map(u => {
+const fname = getFileNameFromUrl(u);
+return `
+                  <div class="file-attachment">
+                      <span class="file-icon">📄</span>
+                      <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer" onclick="window.open('${u}')">
+                          <div style="font-weight:500;">${escapeHTML(fname)}</div>
+                      </div>
+                      <span class="dl-icon" onclick="downloadFile('${u}', '${fname}')" style="cursor:pointer; padding:5px;">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                      </span>
+                  </div>
+              `}).join('');
+}
+
+return `
+              <div class="item-row">
+                  <div class="item-header">
+                      <div class="item-time">${time}</div>
+                      <div class="action-row">
+                          <span class="action-btn ai-btn" onclick="explainMsg(${p.id})">AI Explain</span>
+                          <span class="action-btn copy-btn" onclick="copySafe('${safeBase64}')">Copy</span>
+                          <span class="action-btn del-btn" onclick="deletePost(${p.id})">Delete</span>
+                      </div>
+                  </div>
+                  <div class="content-wrapper" id="wrapper-${p.id}">
+                      ${isCode ? `<pre class="language-javascript"><code>${escapeHTML(p.message)}</code></pre>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
+                  </div>
+                  <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">Show more</div>
+                  ${attachmentHTML}
+                   <div id="ai-res-${p.id}" class="ai-container"></div>
+              </div>
+          `;
+}).join('');
+
+Prism.highlightAll(); 
+checkOverflow();
+feed.scrollTop = feed.scrollHeight;
+}
+
+async function handleSend() {
+const message = msgInput.value.trim();
+if (selectedFiles.length === 0 && !message) return;
+uploadBtn.disabled = true;
+uploadBtn.innerHTML = SPINNER_HTML;
+if (selectedFiles.length > 0) progressBox.style.display = 'block';
+try {
+let uploadedUrls = [];
+for (let i = 0; i < selectedFiles.length; i++) {
+const file = selectedFiles[i];
+const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
+const path = `${Date.now()}_${file.name}`;
+progressBar.style.width = '0%';
+await db.storage.from('uploads').upload(path, finalFile);
+uploadedUrls.push(db.storage.from('uploads').getPublicUrl(path).data.publicUrl);
+}
+await db.from('posts').insert([{ message, url: JSON.stringify(uploadedUrls) }]);
+msgInput.value = ''; msgInput.style.height = 'auto';
+clearPhoto();
+fetchPosts();
+} catch (e) { alert('Failed: ' + e.message); } finally {
+uploadBtn.disabled = false;
+uploadBtn.innerHTML = SEND_ICON_HTML;
+progressBox.style.display = 'none';
+}
+}
+
+uploadBtn.onclick = handleSend;
+
+photoInput.onchange = () => {
+const files = Array.from(photoInput.files);
+if (files.length > 0) { selectedFiles = [...selectedFiles, ...files]; renderPreviews(); }
+photoInput.value = '';
+};
+
+function renderPreviews() {
+previewContainer.innerHTML = '';
+if (selectedFiles.length === 0) {
+previewContainer.style.display = 'none';
+document.getElementById('qualitySelector').style.display = 'none';
+return;
+}
+previewContainer.style.display = 'flex';
+document.getElementById('qualitySelector').style.display = 'flex';
+selectedFiles.forEach((file, index) => {
+const div = document.createElement('div');
+div.className = 'preview-item';
+div.innerHTML = `<button class="remove-preview" onclick="removeFile(${index})">✕</button>`;
+const img = document.createElement('img');
+if (file.type.startsWith('image/')) {
+const reader = new FileReader();
+reader.onload = (e) => img.src = e.target.result;
+reader.readAsDataURL(file);
+} else { img.src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png'; }
+div.appendChild(img);
+previewContainer.appendChild(div);
+});
+}
+
+function removeFile(index) { selectedFiles.splice(index, 1); renderPreviews(); }
+function clearPhoto() { selectedFiles = []; renderPreviews(); }
+function setMode(mode) {
+uploadMode = mode;
+document.getElementById('modeCompress').classList.toggle('active', mode === 'compress');
+document.getElementById('modeRaw').classList.toggle('active', mode === 'raw');
+}
+async function compressImage(file) {
+return new Promise((resolve) => {
+const img = new Image();
+img.src = URL.createObjectURL(file);
+img.onload = () => {
+const canvas = document.createElement('canvas');
+const MAX = 1200;
+let w = img.width, h = img.height;
+if (w > MAX) { h *= MAX/w; w = MAX; }
+canvas.width = w; canvas.height = h;
+canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+canvas.toBlob(b => resolve(b), 'image/jpeg', 0.8);
+};
+});
+}
+function showToast(text = "Copied to clipboard") {
+const t = document.getElementById('toast');
+t.innerText = text; t.style.display = 'block';
+setTimeout(() => t.style.display = 'none', 1500);
+}
+function copySafe(base64Str) {
+const text = decodeURIComponent(escape(window.atob(base64Str)));
+navigator.clipboard.writeText(text).then(() => showToast());
+}
+function checkOverflow() {
+document.querySelectorAll('.content-wrapper').forEach(wrapper => {
+const hint = wrapper.parentElement.querySelector('.expand-hint');
+if (wrapper.scrollHeight > 300) {
+wrapper.classList.add('has-overflow');
+if (hint) hint.style.display = 'block';
+} else {
+wrapper.style.maxHeight = 'none';
+wrapper.classList.remove('has-overflow');
+if (hint) hint.style.display = 'none';
+}
+});
+}
+function toggleExpandById(id) {
+const w = document.getElementById(`wrapper-${id}`), h = document.getElementById(`hint-${id}`);
+w.classList.toggle('expanded');
+h.innerText = w.classList.contains('expanded') ? "Collapse" : "Show more";
+}
+async function fetchPosts() {
+const { data } = await db.from('posts').select('*').order('created_at', { ascending: true });
+render(data);
+}
+async function deletePost(id) { 
+await db.from('posts').delete().eq('id', id); 
+fetchPosts(); 
+}
+function applyUpdate() { location.reload(true); }
+
+db.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchPosts).subscribe();
+fetchPosts();
 </script>
+
 </body>
 </html>
