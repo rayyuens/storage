@@ -137,10 +137,15 @@
         display: flex; align-items: center; gap: 10px;
         padding: 12px; background: var(--input-bg); border-radius: 12px; 
         font-size: 13px; border: 1px solid var(--border); margin-top: 8px; 
-        color: var(--text-main); cursor: pointer;
+        color: var(--text-main); 
         word-break: break-all;
     }
     .file-attachment:hover { filter: brightness(0.95); }
+    .dl-icon { 
+        cursor: pointer; font-size: 18px; padding: 4px;
+        border-radius: 50%; transition: background 0.2s;
+    }
+    .dl-icon:hover { background: rgba(0,0,0,0.1); }
 
     .wa-footer {
         padding: 15px 20px;
@@ -153,7 +158,6 @@
         background: var(--input-bg); border-radius: 28px; padding: 8px 12px;
         max-width: 800px; margin: 0 auto;
         border: 2px dashed transparent;
-        transition: border-color 0.3s, background-color 0.3s;
         position: relative;
     }
 
@@ -178,7 +182,6 @@
 
     .send-btn { background: var(--primary); color: white; transition: 0.2s; font-size: 18px; position: relative; }
 
-    /* 進度條樣式 */
     #progressBox {
         display: none; height: 4px; background: #eee; border-radius: 2px;
         margin: 8px 12px; overflow: hidden;
@@ -245,7 +248,6 @@
             <button id="uploadBtn" class="icon-btn send-btn">➤</button>
         </div>
         <div id="progressBox"><div id="progressBar"></div></div>
-        
         <div id="qualitySelector">
             <span id="modeCompress" class="q-chip active" onclick="setMode('compress')">壓縮</span>
             <span id="modeRaw" class="q-chip" onclick="setMode('raw')">原圖</span>
@@ -254,7 +256,7 @@
 </div>
 
 <script>
-    const APP_VERSION = '3.0'; 
+    const APP_VERSION = '3.1'; 
     const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
     const db = supabase.createClient(SB_URL, SB_KEY);
@@ -291,26 +293,17 @@
         textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
     }
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0) {
-            selectedFiles = [...selectedFiles, ...files];
-            renderPreviews();
-        }
+        if (files.length > 0) { selectedFiles = [...selectedFiles, ...files]; renderPreviews(); }
     });
 
     msgInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
     });
 
     function escapeHTML(str) {
@@ -325,6 +318,23 @@
         } catch(e) { return "未知檔案"; }
     }
 
+    // --- 新增：強制下載函數 ---
+    async function downloadFile(url, filename) {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename || getFileNameFromUrl(url);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        } catch (e) {
+            window.open(url, '_blank'); // 如果 fetch 失敗（例如跨域問題），則直接打開
+        }
+    }
+
     function render(data) {
         if (!data) return;
         feed.innerHTML = data.map(p => {
@@ -333,9 +343,7 @@
             const safeBase64 = window.btoa(unescape(encodeURIComponent(p.message || "")));
             
             let urls = [];
-            if (p.url) {
-                try { urls = JSON.parse(p.url); } catch(e) { urls = p.url.split(','); }
-            }
+            if (p.url) { try { urls = JSON.parse(p.url); } catch(e) { urls = p.url.split(','); } }
             if (!Array.isArray(urls)) urls = [urls];
 
             const imgs = urls.filter(u => u.match(/\.(jpg|jpeg|png|gif|webp)/i));
@@ -343,15 +351,23 @@
 
             let attachmentHTML = '';
             if (imgs.length > 0) {
-                attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `<img src="${u}" class="post-img" onclick="window.open('${u}')">`).join('')}</div>`;
+                attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `
+                    <div style="position:relative">
+                        <img src="${u}" class="post-img" onclick="window.open('${u}')">
+                        <span class="dl-icon" style="position:absolute; bottom:5px; right:5px; background:white; box-shadow:0 2px 5px rgba(0,0,0,0.2)" onclick="downloadFile('${u}')">📥</span>
+                    </div>
+                `).join('')}</div>`;
             }
             if (files.length > 0) {
-                attachmentHTML += files.map(u => `
-                    <div class="file-attachment" onclick="window.open('${u}')">
-                        <span>📄</span>
-                        <span style="flex:1">${escapeHTML(getFileNameFromUrl(u))}</span>
+                attachmentHTML += files.map(u => {
+                    const fname = getFileNameFromUrl(u);
+                    return `
+                    <div class="file-attachment">
+                        <span onclick="window.open('${u}')" style="cursor:pointer">📄</span>
+                        <span style="flex:1; cursor:pointer" onclick="window.open('${u}')">${escapeHTML(fname)}</span>
+                        <span class="dl-icon" onclick="downloadFile('${u}', '${fname}')" title="下載">📥</span>
                     </div>
-                `).join('');
+                `}).join('');
             }
 
             return `
@@ -375,26 +391,21 @@
         feed.scrollTop = feed.scrollHeight;
     }
 
-    // --- 新增：帶有進度回傳的上傳函數 ---
     function uploadWithProgress(file, path) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             const url = `${SB_URL}/storage/v1/object/uploads/${path}`;
-            
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
                     const percent = (e.loaded / e.total) * 100;
                     progressBar.style.width = percent + '%';
                 }
             });
-
             xhr.addEventListener('load', () => {
                 if (xhr.status >= 200 && xhr.status < 300) resolve();
                 else reject(new Error('Upload failed'));
             });
-
             xhr.addEventListener('error', () => reject(new Error('Network error')));
-
             xhr.open('POST', url);
             xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
             xhr.setRequestHeader('apikey', SB_KEY);
@@ -405,37 +416,27 @@
     async function handleSend() {
         const message = msgInput.value.trim();
         if (selectedFiles.length === 0 && !message) return;
-        
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = SPINNER_HTML;
-        
         if (selectedFiles.length > 0) progressBox.style.display = 'block';
-
         try {
             let uploadedUrls = [];
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
                 const finalFile = (file.type.startsWith('image/') && uploadMode === 'compress') ? await compressImage(file) : file;
                 const path = `${Date.now()}_${file.name}`;
-                
-                // 重置進度條
                 progressBar.style.width = '0%';
                 await uploadWithProgress(finalFile, path);
-                
                 uploadedUrls.push(db.storage.from('uploads').getPublicUrl(path).data.publicUrl);
             }
-            
             await db.from('posts').insert([{ message, url: JSON.stringify(uploadedUrls) }]);
             msgInput.value = ''; msgInput.style.height = 'auto';
             clearPhoto();
             fetchPosts();
-        } catch (e) { 
-            alert('上傳失敗: ' + e.message); 
-        } finally {
+        } catch (e) { alert('失敗: ' + e.message); } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = "➤";
             progressBox.style.display = 'none';
-            progressBar.style.width = '0%';
         }
     }
 
@@ -465,9 +466,7 @@
                 const reader = new FileReader();
                 reader.onload = (e) => img.src = e.target.result;
                 reader.readAsDataURL(file);
-            } else {
-                img.src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png';
-            }
+            } else { img.src = 'https://cdn-icons-png.flaticon.com/512/2991/2991108.png'; }
             div.appendChild(img);
             previewContainer.appendChild(div);
         });
