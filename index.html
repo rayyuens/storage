@@ -476,10 +476,9 @@ if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') {
 throw new Error("SB_URL 或 SB_KEY 未定義");
 }
 
-            console.log("4. 準備發送請求至:", `${SB_URL}/functions/v1/swift-responder`);
             console.log("4. 準備發送請求至:", `${SB_URL}/functions/v1/explain-ai`);
 
-            const response = await fetch(`${SB_URL}/functions/v1/swift-responder`, {
+
             const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
 method: 'POST',
 headers: {
