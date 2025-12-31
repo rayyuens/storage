@@ -320,29 +320,6 @@ font-weight: 600;
 50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
 100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
 }
-
-/* AI Container Styles */
-.ai-container {
-    margin-top: 16px;
-    padding: 16px;
-    background: rgba(139, 92, 246, 0.08);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    border-radius: 12px;
-    font-size: 14px;
-    color: var(--text-main);
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-.ai-header {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 600; color: var(--ai-purple);
-    margin-bottom: 10px; border-bottom: 1px solid rgba(139, 92, 246, 0.1);
-    padding-bottom: 8px;
-}
-.close-ai { margin-left: auto; cursor: pointer; opacity: 0.6; padding: 4px; }
-.close-ai:hover { opacity: 1; }
-.ai-content { line-height: 1.6; white-space: pre-wrap; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -480,11 +457,9 @@ window.open(url, '_blank');
 }
 }
 
-// AI Explain Function (Updated for Multi-modal)
-// AI 解釋功能 (宜家會直接儲存入 Supabase，令每個人都見到)
+// AI Explain Function (Store in Supabase Version)
 async function explainMsg(id) {
     const wrapper = document.getElementById(`wrapper-${id}`);
-    // 搵返撳嗰粒掣，整少少 loading 反饋
     const btn = event.currentTarget;
     const originalText = btn.innerText;
 
@@ -495,7 +470,6 @@ async function explainMsg(id) {
     const imgElements = row.querySelectorAll('.post-img');
     const images = Array.from(imgElements).map(img => img.src);
 
-    // 按鈕 Loading 狀態
     btn.innerText = "分析中...";
     btn.style.opacity = "0.5";
     btn.style.pointerEvents = "none";
@@ -517,83 +491,25 @@ async function explainMsg(id) {
         const data = await response.json();
         
         if (data.explanation) {
-            // 🔥 重點：將 AI 嘅解釋作為新 Post 插入 Supabase
-            // 咁樣因為你有 Realtime 訂閱，所有人嘅 Feed 都會即時見到呢條 AI Message
             const aiFormattedMessage = `🤖 AI 洞察 (回應訊息 #${id}):\n\n${data.explanation}`;
             
             const { error } = await db.from('posts').insert([
                 { 
                     message: aiFormattedMessage, 
-                    url: JSON.stringify([]) // AI 暫時唔加圖片
+                    url: JSON.stringify([]) 
                 }
             ]);
 
             if (error) throw error;
             showToast("AI 解釋已發佈到大廳！");
         }
-
     } catch (e) {
         console.error(e);
-        alert("AI 出錯咗： " + e.message);
+        showToast("⚠️ AI 出錯：" + e.message);
     } finally {
-        // 還原按鈕
         btn.innerText = originalText;
         btn.style.opacity = "1";
         btn.style.pointerEvents = "auto";
-    }
-}
-
-    const textContent = wrapper.innerText;
-
-    // Extract Images from the current item row
-    const row = wrapper.closest('.item-row');
-    const imgElements = row.querySelectorAll('.post-img');
-    const images = Array.from(imgElements).map(img => img.src);
-
-    // Show Loading
-    aiContainer.style.display = 'block';
-    aiContainer.innerHTML = `
-        <div class="ai-header">
-            <svg class="spinner" viewBox="0 0 50 50" style="width:16px;height:16px;border:none;">
-                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" style="stroke:var(--ai-purple)"></circle>
-            </svg>
-            <span>AI is analyzing...</span>
-        </div>`;
-
-    try {
-        const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SB_KEY}`,
-                'apikey': SB_KEY
-            },
-            body: JSON.stringify({ 
-                text: textContent,
-                images: images // Sending images array too
-            })
-        });
-
-        const data = await response.json();
-        
-        // Show result
-        aiContainer.innerHTML = `
-            <div class="ai-header">
-                <span>🤖 AI Insight</span>
-                <span class="close-ai" onclick="document.getElementById('ai-res-${id}').style.display='none'">✕</span>
-            </div>
-            <div class="ai-content">${escapeHTML(data.explanation)}</div>
-        `;
-
-    } catch (e) {
-        console.error(e);
-        aiContainer.innerHTML = `
-            <div class="ai-header" style="color:#ef4444; border-color: rgba(239,68,68,0.2)">
-                <span>Error</span>
-                <span class="close-ai" onclick="document.getElementById('ai-res-${id}').style.display='none'">✕</span>
-            </div>
-            <div style="color:#ef4444; font-size:13px;">${e.message}</div>
-        `;
     }
 }
 
@@ -655,7 +571,6 @@ return `
                    </div>
                    <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">Show more</div>
                    ${attachmentHTML}
-                   <div id="ai-res-${p.id}" class="ai-container"></div>
                </div>
            `;
 }).join('');
