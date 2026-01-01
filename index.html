@@ -484,36 +484,51 @@ window.open(url, '_blank');
 // AI 解釋功能 (宜家會直接儲存入 Supabase，令每個人都見到)
 // AI Explain Function (Store in Supabase Version)
 async function explainMsg(id) {
-const wrapper = document.getElementById(`wrapper-${id}`);
-    // 搵返撳嗰粒掣，整少少 loading 反饋
-const btn = event.currentTarget;
-const originalText = btn.innerText;
+    const wrapper = document.getElementById(`wrapper-${id}`);
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
 
-if (!wrapper) return;
+    if (!wrapper) return;
 
-const textContent = wrapper.innerText;
-const row = wrapper.closest('.item-row');
-const imgElements = row.querySelectorAll('.post-img');
-const images = Array.from(imgElements).map(img => img.src);
+    const textContent = wrapper.innerText;
+    const row = wrapper.closest('.item-row');
+    const imgElements = row.querySelectorAll('.post-img');
+    const images = Array.from(imgElements).map(img => img.src);
 
-    // 按鈕 Loading 狀態
-btn.innerText = "分析中...";
-btn.style.opacity = "0.5";
-btn.style.pointerEvents = "none";
+    btn.innerText = "Analyzing...";
+    btn.style.opacity = "0.5";
+    btn.style.pointerEvents = "none";
 
-try {
-const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'Authorization': `Bearer ${SB_KEY}`,
-'apikey': SB_KEY
-},
-body: JSON.stringify({ 
-text: textContent,
-images: images 
-})
-});
+    try {
+        const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SB_KEY}`,
+                'apikey': SB_KEY
+            },
+            body: JSON.stringify({ text: textContent, images: images })
+        });
+
+        const data = await response.json();
+
+        if (data.explanation) {
+            const aiFormattedMessage = `🤖 AI Insight (Ref #${id}):\n\n${data.explanation}`;
+            const { error } = await db.from('posts').insert([
+                { message: aiFormattedMessage, url: JSON.stringify([]) }
+            ]);
+            if (error) throw error;
+            showToast("AI insight shared!");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("⚠️ AI Error: " + e.message);
+    } finally {
+        btn.innerText = originalText;
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+    }
+}
 
 const data = await response.json();
 
