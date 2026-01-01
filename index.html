@@ -320,29 +320,6 @@ font-weight: 600;
 50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
 100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
 }
-
-/* AI Container Styles */
-.ai-container {
-    margin-top: 16px;
-    padding: 16px;
-    background: rgba(139, 92, 246, 0.08);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    border-radius: 12px;
-    font-size: 14px;
-    color: var(--text-main);
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-.ai-header {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 600; color: var(--ai-purple);
-    margin-bottom: 10px; border-bottom: 1px solid rgba(139, 92, 246, 0.1);
-    padding-bottom: 8px;
-}
-.close-ai { margin-left: auto; cursor: pointer; opacity: 0.6; padding: 4px; }
-.close-ai:hover { opacity: 1; }
-.ai-content { line-height: 1.6; white-space: pre-wrap; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -389,7 +366,7 @@ font-weight: 600;
 </div>
 
 <script>
-const APP_VERSION = '4.3'; 
+const APP_VERSION = '4.2'; 
 const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
 const db = supabase.createClient(SB_URL, SB_KEY);
@@ -480,139 +457,48 @@ window.open(url, '_blank');
 }
 }
 
-// AI Explain Function (Updated for Multi-modal)
-// AI 解釋功能 (宜家會直接儲存入 Supabase，令每個人都見到)
-// AI Explain Function (Store in Supabase Version)
+// AI Explain Function
 async function explainMsg(id) {
-    const wrapper = document.getElementById(`wrapper-${id}`);
-    const btn = event.currentTarget;
-    const originalText = btn.innerText;
+console.log("1. 開始執行 explainMsg, ID:", id);
 
-    if (!wrapper) return;
-
-    const textContent = wrapper.innerText;
-    const row = wrapper.closest('.item-row');
-    const imgElements = row.querySelectorAll('.post-img');
-    const images = Array.from(imgElements).map(img => img.src);
-
-    btn.innerText = "Analyzing...";
-    btn.style.opacity = "0.5";
-    btn.style.pointerEvents = "none";
-
-    try {
-        const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SB_KEY}`,
-                'apikey': SB_KEY
-            },
-            body: JSON.stringify({ text: textContent, images: images })
-        });
-
-        const data = await response.json();
-
-        if (data.explanation) {
-            const aiFormattedMessage = `🤖 AI Insight (Ref #${id}):\n\n${data.explanation}`;
-            const { error } = await db.from('posts').insert([
-                { message: aiFormattedMessage, url: JSON.stringify([]) }
-            ]);
-            if (error) throw error;
-            showToast("AI insight shared!");
-        }
-    } catch (e) {
-        console.error(e);
-        showToast("⚠️ AI Error: " + e.message);
-    } finally {
-        btn.innerText = originalText;
-        btn.style.opacity = "1";
-        btn.style.pointerEvents = "auto";
-    }
+try {
+const wrapper = document.getElementById(`wrapper-${id}`);
+if (!wrapper) {
+console.error("2. 錯誤：搵唔到 ID 為 wrapper-" + id + " 的元素");
+return;
 }
+
+const textContent = wrapper.innerText;
+console.log("3. 攞到文字內容:", textContent);
+
+// 檢查變數
+if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') {
+throw new Error("SB_URL 或 SB_KEY 未定義");
+}
+
+            console.log("4. 準備發送請求至:", `${SB_URL}/functions/v1/swift-responder`);
+            console.log("4. 準備發送請求至:", `${SB_URL}/functions/v1/explain-ai`);
+
+            const response = await fetch(`${SB_URL}/functions/v1/swift-responder`, {
+            const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'Authorization': `Bearer ${SB_KEY}`,
+'apikey': SB_KEY
+},
+body: JSON.stringify({ text: textContent })
+});
+
+console.log("5. 伺服器回應狀態:", response.status);
 
 const data = await response.json();
-
-if (data.explanation) {
-            // 🔥 重點：將 AI 嘅解釋作為新 Post 插入 Supabase
-            // 咁樣因為你有 Realtime 訂閱，所有人嘅 Feed 都會即時見到呢條 AI Message
-const aiFormattedMessage = `🤖 AI 洞察 (回應訊息 #${id}):\n\n${data.explanation}`;
-
-const { error } = await db.from('posts').insert([
-{ 
-message: aiFormattedMessage, 
-                    url: JSON.stringify([]) // AI 暫時唔加圖片
-                    url: JSON.stringify([]) 
-}
-]);
-
-if (error) throw error;
-showToast("AI 解釋已發佈到大廳！");
-}
+alert("🤖 AI 回應：\n\n" + data.explanation);
 
 } catch (e) {
-console.error(e);
-        alert("AI 出錯咗： " + e.message);
-        showToast("⚠️ AI 出錯：" + e.message);
-} finally {
-        // 還原按鈕
-btn.innerText = originalText;
-btn.style.opacity = "1";
-btn.style.pointerEvents = "auto";
+console.error("❌ 捕捉到錯誤:", e); // 呢行好重要，睇 Console 會話你知係邊一行出事
+alert("錯誤詳情: " + e.message);
 }
-}
-
-    const textContent = wrapper.innerText;
-
-    // Extract Images from the current item row
-    const row = wrapper.closest('.item-row');
-    const imgElements = row.querySelectorAll('.post-img');
-    const images = Array.from(imgElements).map(img => img.src);
-
-    // Show Loading
-    aiContainer.style.display = 'block';
-    aiContainer.innerHTML = `
-        <div class="ai-header">
-            <svg class="spinner" viewBox="0 0 50 50" style="width:16px;height:16px;border:none;">
-                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" style="stroke:var(--ai-purple)"></circle>
-            </svg>
-            <span>AI is analyzing...</span>
-        </div>`;
-
-    try {
-        const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SB_KEY}`,
-                'apikey': SB_KEY
-            },
-            body: JSON.stringify({ 
-                text: textContent,
-                images: images // Sending images array too
-            })
-        });
-
-        const data = await response.json();
-        
-        // Show result
-        aiContainer.innerHTML = `
-            <div class="ai-header">
-                <span>🤖 AI Insight</span>
-                <span class="close-ai" onclick="document.getElementById('ai-res-${id}').style.display='none'">✕</span>
-            </div>
-            <div class="ai-content">${escapeHTML(data.explanation)}</div>
-        `;
-
-    } catch (e) {
-        console.error(e);
-        aiContainer.innerHTML = `
-            <div class="ai-header" style="color:#ef4444; border-color: rgba(239,68,68,0.2)">
-                <span>Error</span>
-                <span class="close-ai" onclick="document.getElementById('ai-res-${id}').style.display='none'">✕</span>
-            </div>
-            <div style="color:#ef4444; font-size:13px;">${e.message}</div>
-        `;
-    }
 }
 
 function render(data) {
@@ -632,50 +518,49 @@ const files = urls.filter(u => !u.match(/\.(jpg|jpeg|png|gif|webp)/i));
 let attachmentHTML = '';
 if (imgs.length > 0) {
 attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `
-                  <div class="post-img-container">
-                      <a href="${u}" class="pswp-link" data-pswp-width="1200" data-pswp-height="1200" target="_blank">
-                          <img src="${u}" class="post-img" loading="lazy">
-                      </a>
-                      <button class="dl-btn-round" onclick="downloadFile('${u}')" title="Download Image">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                      </button>
-                  </div>
-              `).join('')}</div>`;
+                   <div class="post-img-container">
+                       <a href="${u}" class="pswp-link" data-pswp-width="1200" data-pswp-height="1200" target="_blank">
+                           <img src="${u}" class="post-img" loading="lazy">
+                       </a>
+                       <button class="dl-btn-round" onclick="downloadFile('${u}')" title="Download Image">
+                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                       </button>
+                   </div>
+               `).join('')}</div>`;
 }
 if (files.length > 0) {
 attachmentHTML += files.map(u => {
 const fname = getFileNameFromUrl(u);
 return `
-                  <div class="file-attachment">
-                      <span class="file-icon">📄</span>
-                      <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer" onclick="window.open('${u}')">
-                          <div style="font-weight:500;">${escapeHTML(fname)}</div>
-                      </div>
-                      <span class="dl-icon" onclick="downloadFile('${u}', '${fname}')" style="cursor:pointer; padding:5px;">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                      </span>
-                  </div>
-              `}).join('');
+                   <div class="file-attachment">
+                       <span class="file-icon">📄</span>
+                       <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer" onclick="window.open('${u}')">
+                           <div style="font-weight:500;">${escapeHTML(fname)}</div>
+                       </div>
+                       <span class="dl-icon" onclick="downloadFile('${u}', '${fname}')" style="cursor:pointer; padding:5px;">
+                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                       </span>
+                   </div>
+               `}).join('');
 }
 
 return `
-              <div class="item-row">
-                  <div class="item-header">
-                      <div class="item-time">${time}</div>
-                      <div class="action-row">
-                          <span class="action-btn ai-btn" onclick="explainMsg(${p.id})">AI Explain</span>
-                          <span class="action-btn copy-btn" onclick="copySafe('${safeBase64}')">Copy</span>
-                          <span class="action-btn del-btn" onclick="deletePost(${p.id})">Delete</span>
-                      </div>
-                  </div>
-                  <div class="content-wrapper" id="wrapper-${p.id}">
-                      ${isCode ? `<pre class="language-javascript"><code>${escapeHTML(p.message)}</code></pre>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
-                  </div>
-                  <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">Show more</div>
-                  ${attachmentHTML}
-                   <div id="ai-res-${p.id}" class="ai-container"></div>
-              </div>
-          `;
+               <div class="item-row">
+                   <div class="item-header">
+                       <div class="item-time">${time}</div>
+                       <div class="action-row">
+                           <span class="action-btn ai-btn" onclick="explainMsg(${p.id})">AI Explain</span>
+                           <span class="action-btn copy-btn" onclick="copySafe('${safeBase64}')">Copy</span>
+                           <span class="action-btn del-btn" onclick="deletePost(${p.id})">Delete</span>
+                       </div>
+                   </div>
+                   <div class="content-wrapper" id="wrapper-${p.id}">
+                       ${isCode ? `<pre class="language-javascript"><code>${escapeHTML(p.message)}</code></pre>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
+                   </div>
+                   <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">Show more</div>
+                   ${attachmentHTML}
+               </div>
+           `;
 }).join('');
 
 Prism.highlightAll(); 
