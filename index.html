@@ -416,17 +416,49 @@ textarea.style.height = 'auto';
 textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 }
 
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+// ---------------------------------------------------------
+// NEW: 處理拖放 (Drag and Drop)
+// ---------------------------------------------------------
+dropZone.addEventListener('dragover', (e) => { 
+    e.preventDefault(); 
+    dropZone.classList.add('drag-over'); 
+});
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', (e) => {
-e.preventDefault();
-dropZone.classList.remove('drag-over');
-const files = Array.from(e.dataTransfer.files);
-if (files.length > 0) { selectedFiles = [...selectedFiles, ...files]; renderPreviews(); }
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) { 
+        selectedFiles = [...selectedFiles, ...files]; 
+        renderPreviews(); 
+    }
+});
+
+// ---------------------------------------------------------
+// NEW: 處理貼上 (Paste Image) - 支持 PC 用戶 Ctrl+V
+// ---------------------------------------------------------
+msgInput.addEventListener('paste', (e) => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    let foundImage = false;
+    for (let index in items) {
+        const item = items[index];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const blob = item.getAsFile();
+            const file = new File([blob], `pasted_image_${Date.now()}.png`, { type: blob.type });
+            selectedFiles.push(file);
+            foundImage = true;
+        }
+    }
+    if (foundImage) {
+        renderPreviews();
+    }
 });
 
 msgInput.addEventListener('keydown', (e) => {
-if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        handleSend(); 
+    }
 });
 
 function escapeHTML(str) {
@@ -457,14 +489,11 @@ window.open(url, '_blank');
 }
 }
 
-// AI Explain Function (Store in Supabase Version)
 async function explainMsg(id) {
     const wrapper = document.getElementById(`wrapper-${id}`);
     const btn = event.currentTarget;
     const originalText = btn.innerText;
-
     if (!wrapper) return;
-
     const textContent = wrapper.innerText;
     const row = wrapper.closest('.item-row');
     const imgElements = row.querySelectorAll('.post-img');
@@ -482,30 +511,16 @@ async function explainMsg(id) {
                 'Authorization': `Bearer ${SB_KEY}`,
                 'apikey': SB_KEY
             },
-            body: JSON.stringify({ 
-                text: textContent,
-                images: images 
-            })
+            body: JSON.stringify({ text: textContent, images: images })
         });
-
         const data = await response.json();
-        
         if (data.explanation) {
             const aiFormattedMessage = `🤖 AI 洞察 (回應訊息 #${id}):\n\n${data.explanation}`;
-            
-            const { error } = await db.from('posts').insert([
-                { 
-                    message: aiFormattedMessage, 
-                    url: JSON.stringify([]) 
-                }
-            ]);
-
-            if (error) throw error;
-            showToast("AI 解釋已發佈到大廳！");
+            await db.from('posts').insert([{ message: aiFormattedMessage, url: JSON.stringify([]) }]);
+            showToast("AI 解釋已發佈！");
         }
     } catch (e) {
-        console.error(e);
-        showToast("⚠️ AI 出錯：" + e.message);
+        showToast("⚠️ AI 出錯");
     } finally {
         btn.innerText = originalText;
         btn.style.opacity = "1";
@@ -534,7 +549,7 @@ attachmentHTML += `<div class="attachment-grid">${imgs.map(u => `
                        <a href="${u}" class="pswp-link" data-pswp-width="1200" data-pswp-height="1200" target="_blank">
                            <img src="${u}" class="post-img" loading="lazy">
                        </a>
-                       <button class="dl-btn-round" onclick="downloadFile('${u}')" title="Download Image">
+                       <button class="dl-btn-round" onclick="downloadFile('${u}')">
                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                        </button>
                    </div>
@@ -549,8 +564,8 @@ return `
                        <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer" onclick="window.open('${u}')">
                            <div style="font-weight:500;">${escapeHTML(fname)}</div>
                        </div>
-                       <span class="dl-icon" onclick="downloadFile('${u}', '${fname}')" style="cursor:pointer; padding:5px;">
-                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                       <span onclick="downloadFile('${u}', '${fname}')" style="cursor:pointer; padding:5px;">
+                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                        </span>
                    </div>
                `}).join('');
