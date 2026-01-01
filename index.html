@@ -366,7 +366,7 @@ font-weight: 600;
 </div>
 
 <script>
-const APP_VERSION = '4.2'; 
+const APP_VERSION = '4.3'; 
 const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
 const db = supabase.createClient(SB_URL, SB_KEY);
@@ -457,46 +457,60 @@ window.open(url, '_blank');
 }
 }
 
-// AI Explain Function
+// AI Explain Function (Store in Supabase Version)
 async function explainMsg(id) {
-console.log("1. 開始執行 explainMsg, ID:", id);
+    const wrapper = document.getElementById(`wrapper-${id}`);
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
 
-try {
-const wrapper = document.getElementById(`wrapper-${id}`);
-if (!wrapper) {
-console.error("2. 錯誤：搵唔到 ID 為 wrapper-" + id + " 的元素");
-return;
-}
+    if (!wrapper) return;
 
-const textContent = wrapper.innerText;
-console.log("3. 攞到文字內容:", textContent);
+    const textContent = wrapper.innerText;
+    const row = wrapper.closest('.item-row');
+    const imgElements = row.querySelectorAll('.post-img');
+    const images = Array.from(imgElements).map(img => img.src);
 
-// 檢查變數
-if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') {
-throw new Error("SB_URL 或 SB_KEY 未定義");
-}
+    btn.innerText = "分析中...";
+    btn.style.opacity = "0.5";
+    btn.style.pointerEvents = "none";
 
-            console.log("4. 準備發送請求至:", `${SB_URL}/functions/v1/explain-ai`);
+    try {
+        const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SB_KEY}`,
+                'apikey': SB_KEY
+            },
+            body: JSON.stringify({ 
+                text: textContent,
+                images: images 
+            })
+        });
 
-            const response = await fetch(`${SB_URL}/functions/v1/explain-ai`, {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'Authorization': `Bearer ${SB_KEY}`,
-'apikey': SB_KEY
-},
-body: JSON.stringify({ text: textContent })
-});
+        const data = await response.json();
+        
+        if (data.explanation) {
+            const aiFormattedMessage = `🤖 AI 洞察 (回應訊息 #${id}):\n\n${data.explanation}`;
+            
+            const { error } = await db.from('posts').insert([
+                { 
+                    message: aiFormattedMessage, 
+                    url: JSON.stringify([]) 
+                }
+            ]);
 
-console.log("5. 伺服器回應狀態:", response.status);
-
-const data = await response.json();
-alert("🤖 AI 回應：\n\n" + data.explanation);
-
-} catch (e) {
-console.error("❌ 捕捉到錯誤:", e); // 呢行好重要，睇 Console 會話你知係邊一行出事
-alert("錯誤詳情: " + e.message);
-}
+            if (error) throw error;
+            showToast("AI 解釋已發佈到大廳！");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("⚠️ AI 出錯：" + e.message);
+    } finally {
+        btn.innerText = originalText;
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+    }
 }
 
 function render(data) {
