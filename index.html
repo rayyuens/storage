@@ -515,7 +515,7 @@ async function explainMsg(id) {
         });
         const data = await response.json();
         if (data.explanation) {
-            const aiFormattedMessage = `🤖 AI 洞察 (回應訊息 #${id}):\n\n${data.explanation}`;
+            const aiFormattedMessage = `🤖 AI Explain (回應訊息 #${id}):\n\n${data.explanation}`;
             await db.from('posts').insert([{ message: aiFormattedMessage, url: JSON.stringify([]) }]);
             showToast("AI 解釋已發佈！");
         }
