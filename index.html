@@ -148,6 +148,9 @@ max-height: 300px;
 overflow: hidden;
 transition: max-height 0.4s cubic-bezier(0, 0, 0.2, 1);
 }
+.content-wrapper a { color: var(--primary); text-decoration: none; font-weight: 500; }
+.content-wrapper a:hover { text-decoration: underline; }
+
 .content-wrapper.expanded { max-height: none; }
 .content-wrapper.has-overflow:not(.expanded)::after {
 content: "";
@@ -164,6 +167,25 @@ border: 1px solid var(--border) !important;
 background: var(--code-bg) !important;
 box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
+
+/* Link Preview Styles */
+.link-preview {
+margin-top: 12px;
+border: 1px solid var(--border);
+border-radius: 12px;
+overflow: hidden;
+background: var(--bg);
+display: flex;
+flex-direction: column;
+text-decoration: none !important;
+transition: transform 0.2s;
+}
+.link-preview:hover { transform: translateY(-2px); border-color: var(--primary); }
+.lp-content { padding: 12px; display: flex; align-items: center; gap: 12px; }
+.lp-icon { font-size: 24px; flex-shrink: 0; }
+.lp-info { overflow: hidden; }
+.lp-title { font-weight: 600; font-size: 14px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-url { font-size: 12px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .expand-hint {
 text-align: center; color: var(--text-sub); font-size: 12px;
@@ -377,13 +399,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Add to Home Screen (A2HS) Logic
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-});
-
 const APP_VERSION = '4.3'; 
 const SB_URL = 'https://tywvhvarouhzapqihcit.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d3ZodmFyb3VoemFwcWloY2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODI2OTMsImV4cCI6MjA4MjU1ODY5M30.3LLxsdfXHZ3EkpNpwI5AzKHCSx1499Ha7tXzS6mkTvI';
@@ -432,6 +447,35 @@ const SEND_ICON_HTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="no
 function autoResize(textarea) {
 textarea.style.height = 'auto';
 textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+}
+
+// URL Detect and Linkify logic
+function linkify(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+}
+
+function generateLinkPreview(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const match = text.match(urlRegex);
+    if (match && match.length > 0) {
+        const url = match[0];
+        const domain = new URL(url).hostname;
+        return `
+            <a href="${url}" target="_blank" class="link-preview">
+                <div class="lp-content">
+                    <span class="lp-icon">🔗</span>
+                    <div class="lp-info">
+                        <div class="lp-title">Visit Link</div>
+                        <div class="lp-url">${domain}</div>
+                    </div>
+                </div>
+            </a>
+        `;
+    }
+    return '';
 }
 
 dropZone.addEventListener('dragover', (e) => { 
@@ -583,6 +627,8 @@ return `
                `}).join('');
 }
 
+const linkPreviewHTML = p.message ? generateLinkPreview(p.message) : '';
+
 return `
                <div class="item-row">
                    <div class="item-header">
@@ -594,7 +640,8 @@ return `
                        </div>
                    </div>
                    <div class="content-wrapper" id="wrapper-${p.id}">
-                       ${isCode ? `<pre class="language-javascript"><code>${escapeHTML(p.message)}</code></pre>` : `<div style="white-space:pre-wrap;">${escapeHTML(p.message)}</div>`}
+                       ${isCode ? `<pre class="language-javascript"><code>${escapeHTML(p.message)}</code></pre>` : `<div style="white-space:pre-wrap;">${linkify(escapeHTML(p.message))}</div>`}
+                       ${linkPreviewHTML}
                    </div>
                    <div class="expand-hint" id="hint-${p.id}" onclick="toggleExpandById(${p.id})">Show more</div>
                    ${attachmentHTML}
