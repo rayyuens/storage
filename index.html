@@ -391,11 +391,19 @@ font-weight: 600;
 
 <script>
 // --- PWA Service Worker Registration ---
+// 喺 index.html 嘅 PWA registration 入面加：
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registered!', reg))
-      .catch(err => console.log('Service Worker registration failed:', err));
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    // 檢查是否有新版本
+    reg.onupdatefound = () => {
+      const installingWorker = reg.installing;
+      installingWorker.onstatechange = () => {
+        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // 顯示你個 updateBanner
+          document.getElementById('updateBanner').style.display = 'block';
+        }
+      };
+    };
   });
 }
 
