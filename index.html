@@ -519,9 +519,22 @@ msgInput.addEventListener('paste', (e) => {
 });
 
 msgInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { 
-        e.preventDefault(); 
-        handleSend(); 
+    // 檢查係咪撳咗 Enter 掣
+    if (e.key === 'Enter') {
+        // 判斷係咪流動裝置 (iOS / Android / Touch Screen)
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0);
+        
+        if (isMobile) {
+            // 喺手機上，我哋唔做 handleSend()，由得佢正常換行
+            // 咁樣用家就一定要撳個飛機 icon 先會送出
+            return;
+        } else {
+            // 喺電腦上，如果冇撳住 Shift 就 Enter，就執行發送
+            if (!e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        }
     }
 });
 
